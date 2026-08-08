@@ -1,152 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { shuffle } from '../../src/lib/shuffle';
-import type { PracticeBank, PracticeDifficulty, PracticeItem } from '../../src/types';
+import {
+  createSession,
+  drawQuestion,
+  maybeAdapt,
+  normalizeQuestion,
+  type HistoryEntry,
+  type Session,
+} from '../../src/hooks/usePracticeSession';
+import type { PracticeBank, PracticeItem } from '../../src/types';
 
-// `maybeAdapt`, `createSession`, `drawQuestion` and `normalizeQuestion` are
-// unexported internals of src/islands/practice.ts (lines 330-432), closed
-// over DOM elements that don't exist outside a rendered practice.astro page.
-// The plan's own text calls maybeAdapt/createSession/drawQuestion "already
-// DOM-free" — true of the algorithm, not of the enclosing scope — so per
-// Phase 1c/1d these are pinned via a byte-for-byte copy of the algorithmic
-// body (DOM side effects elided and called out below) rather than modifying
-// practice.ts, which this phase does not touch. Appendix A is the exact
-// contract these tests pin. When practice.ts is extracted into
-// usePracticeSession in Phase 10d, swap this copy for a real import — these
-// assertions should still pass unchanged.
+// Phase 10d extracted maybeAdapt/createSession/drawQuestion/normalizeQuestion
+// out of src/islands/practice.ts (lines 330-432, closed over DOM elements
+// and a module-level QUESTIONS bank) into src/hooks/usePracticeSession.ts as
+// real exported functions (QUESTIONS becomes an explicit first parameter to
+// createSession; drawQuestion drops the updateDiffChip DOM write, elided
+// below). These tests now import that real module instead of the
+// byte-for-byte copy Phase 1d pinned this file with — same algorithm, same
+// assertions, no copy left to drift. Appendix A is the exact contract these
+// tests pin.
 
-interface NormalizedQuestion {
-  id: string;
-  prompt: string;
-  choices: string[];
-  answerIndex: number;
-  explanation: string;
-}
-
-interface HistoryEntry {
-  id: string;
-  correct: boolean;
-  difficulty: PracticeDifficulty;
-}
-
-interface Session {
-  category: string;
-  topics: string[];
-  totalQuestions: number;
-  adaptWindow: number;
-  adaptive: boolean;
-  asked: number;
-  correct: number;
-  streak: number;
-  history: HistoryEntry[];
-  byDiff: Record<PracticeDifficulty, PracticeItem[]>;
-  current: NormalizedQuestion | null;
-  currentDiff: PracticeDifficulty;
-  timeline: unknown[];
-  currentIndex: number;
-}
-
-function createSession(
-  QUESTIONS: PracticeBank,
-  params: { category: string; topics: string[]; totalQuestions: number; adaptWindow: number; adaptive: boolean },
-): Session | null {
-  const { category, topics, totalQuestions, adaptWindow, adaptive } = params;
-  const catObj = QUESTIONS[category];
-  if (!catObj) return null;
-
-  const byDiff: Record<PracticeDifficulty, PracticeItem[]> = { easy: [], medium: [], hard: [] };
-  topics.forEach((t) => {
-    const block = catObj[t];
-    if (!block) return;
-    (['easy', 'medium', 'hard'] as const).forEach((d) => {
-      const arr = block[d];
-      if (Array.isArray(arr)) byDiff[d].push(...arr);
-    });
-  });
-
-  byDiff.easy = shuffle(byDiff.easy);
-  byDiff.medium = shuffle(byDiff.medium);
-  byDiff.hard = shuffle(byDiff.hard);
-
-  if (!byDiff.easy.length && !byDiff.medium.length && !byDiff.hard.length) return null;
-
-  const startDiff: PracticeDifficulty = byDiff.medium.length ? 'medium' : byDiff.easy.length ? 'easy' : 'hard';
-
-  return {
-    category,
-    topics,
-    totalQuestions,
-    adaptWindow,
-    adaptive,
-    asked: 0,
-    correct: 0,
-    streak: 0,
-    history: [],
-    byDiff,
-    current: null,
-    currentDiff: startDiff,
-    timeline: [],
-    currentIndex: -1,
-  };
-}
-
-function maybeAdapt(session: Session): void {
-  if (!session.adaptive) return;
-  const N = session.adaptWindow;
-  const slice = session.history.slice(-N);
-  if (!slice.length) return;
-
-  const acc = slice.filter((x) => x.correct).length / slice.length;
-  let next = session.currentDiff;
-
-  if (acc >= 0.85) {
-    if (session.currentDiff === 'easy' && session.byDiff.medium.length) next = 'medium';
-    else if (session.currentDiff === 'medium' && session.byDiff.hard.length) next = 'hard';
-  } else if (acc <= 0.5) {
-    if (session.currentDiff === 'hard' && session.byDiff.medium.length) next = 'medium';
-    else if (session.currentDiff === 'medium' && session.byDiff.easy.length) next = 'easy';
-  }
-
-  session.currentDiff = next;
-}
-
-function cryptoRandomId(): string {
-  try {
-    return 'q-' + crypto.getRandomValues(new Uint32Array(1))[0]!.toString(36);
-  } catch {
-    return 'q-' + Math.random().toString(36).slice(2);
-  }
-}
-
-function normalizeQuestion(raw: PracticeItem): NormalizedQuestion {
-  const choices = raw.choices.slice();
-  let answerIndex = choices.findIndex((c) => c === raw.answer);
-  if (answerIndex < 0) answerIndex = 0;
-  return {
-    id: raw.id || cryptoRandomId(),
-    prompt: raw.question,
-    choices,
-    answerIndex,
-    explanation: '',
-  };
-}
-
-// Real drawQuestion also calls `updateDiffChip(d)` (practice.ts:427), which
-// writes to #chip-diff/#stat-diff — DOM chrome with no bearing on the
-// session state this test pins, elided here rather than stubbed.
-function drawQuestion(session: Session): NormalizedQuestion | null {
-  const tryOrder: PracticeDifficulty[] = [session.currentDiff, 'medium', 'easy', 'hard'];
-  for (const d of tryOrder) {
-    const arr = session.byDiff[d];
-    if (arr && arr.length) {
-      const raw = arr.shift()!;
-      const q = normalizeQuestion(raw);
-      session.current = q;
-      session.currentDiff = d;
-      return q;
-    }
-  }
-  return null;
-}
+// Real drawQuestion no longer calls updateDiffChip — DOM chrome with no
+// bearing on the session state these tests pin (Session.tsx renders
+// session.currentDiff directly instead of that imperative write).
 
 // ---- test helpers ----
 
