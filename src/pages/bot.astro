@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { Bot } from '../components/bot/Bot';
 ---
 <Base
   title="Know the playbook. Beat the traps."
@@ -23,22 +24,10 @@ import Base from '../layouts/Base.astro';
         <p class="chat-subtext">Tell me what’s happening and I’ll guide you.</p>
       </div>
 
-      <div id="chat-window" class="chat-window">
-        <div class="bot-bubble intro">Hi! How can I help you today?</div>
-      </div>
-
-      <form id="chat-form" class="chat-form">
-        <input type="text" id="user-input" placeholder="Type your issue…" autocomplete="off" required />
-        <button type="submit">Send</button>
-      </form>
+      <!-- client:load (not client:visible): this widget is the entire point
+           of the page and sits above the fold on every viewport, so there's
+           no scroll distance to defer hydration across. -->
+      <Bot client:load />
     </section>
   </div>
-
-  <script>
-    import { initBotChat } from '../islands/bot';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      initBotChat();
-    });
-  </script>
 </Base>

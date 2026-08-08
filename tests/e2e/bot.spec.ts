@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Characterization of islands/bot.ts against bot.astro, with the real
-// (slow, free-tier) backend mocked via page.route.
+// Characterization of components/bot/Bot.tsx (formerly islands/bot.ts)
+// against bot.astro, with the real (slow, free-tier) backend mocked via
+// page.route. Ids and class names are unchanged by the React conversion, so
+// every selector below still targets the same DOM shape.
 
 const ENDPOINT = 'https://fixitbotbackend.onrender.com/api/chat';
 
@@ -80,4 +82,31 @@ test('a <script> in the reply is inserted as text, never executed', async ({ pag
   const innerHtml = await bubble.innerHTML();
   expect(innerHtml).not.toContain('<script>alert');
   expect(alertFired).toBe(false);
+});
+
+test('a rapid double submit cannot produce two typing bubbles', async ({ page }) => {
+  await page.route(ENDPOINT, async (route) => {
+    await new Promise((r) => setTimeout(r, 300));
+    await route.fulfill({ json: { reply: 'Here is how to fix that.' } });
+  });
+  await page.goto('/bot');
+
+  await page.locator('#user-input').fill('My subscription auto-renewed.');
+  const submitBtn = page.locator('#chat-form button[type="submit"]');
+
+  // Fire two clicks back to back. The second must be a no-op: the button
+  // (and input) are disabled the moment a request is in flight, so there is
+  // structurally only ever one in-flight request and one typing bubble —
+  // not just a race that's unlikely to lose.
+  await submitBtn.click();
+  await submitBtn.click({ force: true });
+
+  await expect(page.locator('#user-input')).toBeDisabled();
+  await expect(submitBtn).toBeDisabled();
+  await expect(page.locator('.bot-bubble.typing')).toHaveCount(1);
+  await expect(page.locator('.user-bubble', { hasText: 'My subscription auto-renewed.' })).toHaveCount(1);
+
+  await expect(page.locator('.bot-bubble.typing')).toHaveCount(0);
+  await expect(page.locator('.bot-bubble', { hasText: 'Here is how to fix that.' })).toBeVisible();
+  await expect(page.locator('#user-input')).toBeEnabled();
 });
