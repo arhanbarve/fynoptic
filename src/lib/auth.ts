@@ -12,6 +12,7 @@ import { FirebaseError, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
   browserLocalPersistence,
   browserSessionPersistence,
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
   getRedirectResult,
@@ -46,6 +47,15 @@ const firebaseConfig = {
 
 const app: FirebaseApp = initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
+
+// Test-only seam (tests/e2e/auth.spec.ts, tests/e2e/profile.spec.ts): when
+// PUBLIC_AUTH_EMULATOR is set to the emulator's URL (e.g.
+// "http://127.0.0.1:9099"), point auth at the local Firebase Auth emulator
+// instead of the real project. Unset in every real deployment, so
+// production behavior is byte-identical to before this guard existed.
+if (import.meta.env.PUBLIC_AUTH_EMULATOR) {
+  connectAuthEmulator(auth, import.meta.env.PUBLIC_AUTH_EMULATOR, { disableWarnings: true });
+}
 
 async function setUpPersistence(): Promise<void> {
   try {
