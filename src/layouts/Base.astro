@@ -69,9 +69,10 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
   <title>{title}</title>
 </head>
 <body data-theme="dark">
+  <a href="#main" class="skip-link">Skip to content</a>
   <SiteBg />
   <Header />
-  <main id="main">
+  <main id="main" tabindex="-1">
     <slot />
   </main>
   <div class="toast-container" aria-live="polite" aria-atomic="true"></div>
