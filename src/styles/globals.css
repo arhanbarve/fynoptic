@@ -44,7 +44,9 @@
   --radius: var(--radius-md);
 
   /* Hero-only display face. Deliberately NOT named --font-sans or
-     --display-face — those are Spectral, site-wide, defined in
-     redesign.css, and untouched by this file. */
+     --display-face — as of Phase 3, --display-face is also Helvetica
+     Neue site-wide (defined in redesign.css, untouched by this file),
+     so this duplicates its value today, but a separate name keeps the
+     hero decoupled from any future site-wide type change. */
   --font-hero: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }

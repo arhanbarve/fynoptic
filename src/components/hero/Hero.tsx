@@ -26,16 +26,19 @@ export function Hero() {
       transition={{ duration: 0.5, ease: 'easeOut' }}
     >
       {/* redesign.css's sitewide `h1 { font-family: var(--display-face) !important;
-          font-weight: 600 !important; letter-spacing: -.018em !important }` (the
-          legacy Spectral display heading rule) outranks plain, non-important
-          Tailwind utilities on ANY of those three properties, not just font-family
-          — font-bold/tracking-[-0.02em] were silently losing the same way the
-          font-family override did before it got the `!` treatment. All three now
+          font-weight: 600 !important; letter-spacing: -.018em !important }` outranks
+          plain, non-important Tailwind utilities on ANY of those three properties, not
+          just font-family — font-bold/tracking-[-0.02em] were silently losing the same
+          way the font-family override did before it got the `!` treatment. All three now
           carry the trailing `!` (Tailwind's !important marker): Tailwind's
           utilities live in globals.css's `@layer utilities` while redesign.css is
           unlayered, and for !important declarations, layered rules always outrank
           unlayered ones regardless of selector specificity, so these reliably win
-          without touching that file. `id="hero-heading"` is required separately:
+          without touching that file. (As of Phase 3, --display-face is Helvetica
+          Neue too, the same stack as --font-hero below, so the font-family override
+          is now redundant in value — kept for the weight/letter-spacing overrides
+          it travels with, and to decouple the hero from any future site-wide
+          type change.) `id="hero-heading"` is required separately:
           index.astro's hero section reads it via aria-labelledby. */}
       <h1
         id="hero-heading"
