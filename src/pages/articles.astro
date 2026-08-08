@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import { ARTICLE_META } from '../data/articles';
 import { computeReadMins, deriveBlurb } from '../lib/article-summary';
+import { ArticlesBrowser } from '../components/articles/ArticlesBrowser';
 
 // Bodies are read at build time only. Nothing here reaches the browser except
 // the rendered cards, so the index costs no article payload at runtime.
@@ -94,6 +95,16 @@ const cards = ARTICLE_META.map((a) => {
     </div>
   </section>
 
+  <!--
+    Renders nothing (see ArticlesBrowser.tsx) — it wires up the search
+    input, sort select, result count, empty state and load-more button
+    above, all of which stay exactly as Astro rendered them, and only ever
+    toggles `hidden` / reorders the 244 cards already in #articles-grid.
+    client:load so the grid is paged down to 12 cards immediately, not
+    deferred until scrolled into view.
+  -->
+  <ArticlesBrowser client:load />
+
   <!-- Back to top -->
   <button class="btn btn-primary float-top" id="float-top" aria-label="Back to top">↑</button>
 
@@ -124,11 +135,9 @@ const cards = ARTICLE_META.map((a) => {
   </style>
 
   <script>
-    import { initArticlesBrowser } from '../islands/articles-browser';
     import { initBackToTop } from '../lib/back-to-top';
 
     document.addEventListener('DOMContentLoaded', () => {
-      initArticlesBrowser();
       initBackToTop();
     });
   </script>
