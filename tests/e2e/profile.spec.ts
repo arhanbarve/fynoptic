@@ -1,10 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 
 // Requires the Firebase Auth emulator, same as auth.spec.ts. Characterizes
-// islands/profile.ts against the current profile.astro markup — which per
-// the plan's F-findings is "mostly dead code": no <form>/<input> exist on
-// this page yet, so the settings-panel wiring in profile.ts is defensive
-// no-ops. This spec pins what's actually reachable today.
+// components/profile/Profile.tsx (formerly islands/profile.ts) against
+// profile.astro, which now just mounts it. Ids and class names the base
+// shell owns are unchanged by the React conversion, so those selectors
+// still target the same DOM shape. The settings panel (ProfileSettings,
+// O5) is a separate component wired in by the Phase 10c integration step —
+// this file covers only the base shell: redirect, info display, progress,
+// sign-out.
 
 function uniqueEmail(): string {
   return `profile-test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
@@ -59,10 +62,10 @@ test('renders name, email, provider chip, joined/last-login, and a progress ring
   await expect(page.locator('#mods-total')).toHaveText(/4|6/); // dp-fallback (4) or legacy6 (6) depending on prior state
   await expect(page.locator('#pct-text')).toHaveText('0%');
 
-  // #prov is a known dead element — never written by profile.ts (Appendix
-  // E). Pinning the current, unhelpful state so a future fix (O5) is
-  // visible as an intentional change, not a silent one.
-  await expect(page.locator('#prov')).toHaveText('—');
+  // #prov was a known dead element under the old islands/profile.ts —
+  // never written (Appendix E). O5 fixes it: Profile.tsx binds it to the
+  // same provider label the chip row shows.
+  await expect(page.locator('#prov')).toHaveText('password');
 });
 
 test('sign out redirects to /', async ({ page }) => {

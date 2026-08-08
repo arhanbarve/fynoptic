@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { Profile } from '../components/profile/Profile';
 ---
 <Base
   title="Your Profile • Fynoptic"
@@ -8,87 +9,9 @@ import Base from '../layouts/Base.astro';
   ogTitle="Your Profile • Fynoptic"
   ogDescription="Manage your Fynoptic account and progress."
 >
-  <section class="profile-hero" role="region" aria-labelledby="profile-heading">
-    <div class="hero-bg">
-      <img src="/assets/texture-noise.svg" alt="" aria-hidden="true" />
-      <div class="orb orb1"></div>
-      <div class="orb orb2"></div>
-      <div class="ring ring1"></div>
-      <div class="ring ring2"></div>
-    </div>
-
-    <div class="container">
-      <div class="profile-card">
-        <div class="avatar-wrap">
-          <img id="prof-avatar" alt="" class="avatar" />
-          <div class="avatar-fallback" id="prof-initials" aria-hidden="true"></div>
-        </div>
-
-        <div class="id-block">
-          <h1 id="profile-heading">Hey, <span id="prof-name">Friend</span> 👋</h1>
-          <p class="muted" id="prof-email"></p>
-
-          <div class="chip-row" id="chip-row">
-            <!-- chips injected (Verified / Provider / etc.) -->
-          </div>
-
-          <div class="action-row">
-            <button id="logout-btn" class="btn btn-primary">Sign out</button>
-          </div>
-        </div>
-
-        <div class="ring-progress" aria-label="Course progress">
-          <div class="ring" id="ring" role="img" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-            <div class="ring-center">
-              <div class="ring-num"><span id="ring-num">0</span>%</div>
-              <div class="ring-label">Course</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STATS GRID -->
-      <div class="stats-grid">
-        <div class="stat card">
-          <div class="stat-label">Joined</div>
-          <div class="stat-value" id="joined-at">—</div>
-        </div>
-        <div class="stat card">
-          <div class="stat-label">Last sign-in</div>
-          <div class="stat-value" id="last-login">—</div>
-        </div>
-        <div class="stat card">
-          <div class="stat-label">Modules completed</div>
-          <div class="stat-value"><span id="mods-done">0</span>/<span id="mods-total">0</span></div>
-        </div>
-        <div class="stat card">
-          <div class="stat-label">Provider</div>
-          <div class="stat-value" id="prov">—</div>
-        </div>
-      </div>
-
-      <!-- PROGRESS BLOCK -->
-      <section class="progress-block card">
-        <header class="section-head">
-          <h2>Your course progress</h2>
-          <p class="section-note">Keep going — you’re building real consumer power.</p>
-        </header>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill" style="--p:0%"></div>
-        </div>
-        <div class="progress-meta">
-          <span><strong id="pct-text">0%</strong> complete</span>
-          <a href="/courses" class="btn btn-ghost">Continue learning</a>
-        </div>
-      </section>
-    </div>
-  </section>
-
-  <script>
-    import { initProfile } from '../islands/profile';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      initProfile();
-    });
-  </script>
+  <!-- client:load (not client:visible): this is the entire content of the
+       page — nothing above the fold to defer hydration across — and the
+       signed-out redirect must fire as soon as auth resolves, not once the
+       component happens to scroll into view. -->
+  <Profile client:load />
 </Base>
