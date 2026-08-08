@@ -47,6 +47,17 @@ test.describe('homepage hero', () => {
     expect(fontFamily).toContain('Helvetica');
   });
 
+  test('subhead renders in Inter, not the display face', async ({ page }) => {
+    // Phase 3 gate: the hero subhead is body copy, not a heading, so it
+    // should never pick up --display-face/--editorial-face regardless of
+    // which font backs those tokens.
+    await page.goto('/');
+    const fontFamily = await page
+      .locator('#hero-heading + p')
+      .evaluate((el) => getComputedStyle(el).fontFamily);
+    expect(fontFamily).toContain('Inter');
+  });
+
   test('subhead uses the muted-foreground token, not a stale legacy color', async ({ page }) => {
     // The subhead used to carry the legacy `.hero-sub` classname, whose
     // unlayered `!important` color rule silently beat this Tailwind
