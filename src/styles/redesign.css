@@ -634,3 +634,92 @@ html body .fc-block > h2,
 html body .wizard-panel > h2,
 html body .fc-block .fc-label,
 html body .wizard-panel h2 { text-align: left !important; }
+
+/* ---- 15. footer: four columns (Footer.tsx, §6.4) ------------------------- */
+/* Grid lives on a class of its own (.ft-grid) rather than reusing the old
+   .footer-container's 3-column grid from legacy.css — that grid is keyed to
+   exactly .footer-left/.footer-links/.footer-contact as direct children, so
+   giving it a new name keeps the two systems from fighting once the old
+   Footer.astro (and this rule's only consumer) is deleted. */
+.footer .ft-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
+  gap: clamp(24px, 4vw, 48px);
+  padding: clamp(32px, 5vw, 56px) 0 clamp(20px, 3vw, 32px);
+}
+.footer .ft-col { min-width: 0; }
+.footer .ft-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--wordmark-face);
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: -.012em;
+  color: var(--footer-fg);
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+.footer .ft-col .footer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Footer column heads (rendered as h2 — see Footer.tsx for why not h3).
+   `h1, h2, h3, … { font-family: var(--display-face) !important }` above
+   (section 4) is unscoped, so it reaches every h2 on the page, including
+   these, and its !important means a plain `.s-label` class (lower
+   specificity, no !important) can never win regardless of source order.
+   `.footer h2.s-label` is specific enough (0 ids, 2 classes, 1 element) to
+   out-rank that rule while staying !important itself — the general h1-h3
+   rule stays untouched for every other heading on the site. */
+.footer h2.s-label {
+  font-family: var(--mono-face) !important;
+  font-weight: 600 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase;
+  font-size: .78rem;
+  color: var(--footer-muted);
+  margin: 0 0 14px;
+}
+
+/* ---- 16. navbar: theme icon + #user-btn text state (Nav.tsx, §6.1) ------- */
+/* #theme-btn goes from a text button ("Light"/"Dark") to a 32x32 icon
+   button. The label survives as an .sr-only child so the accessible name is
+   unchanged; only the visible presentation moves to the icon. */
+.header #theme-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px !important;
+}
+
+/* Signed OUT, #user-btn reads "Sign In" as a text pill (spec §6.1) instead of
+   the bare glyph circle section 9 above still paints via
+   `.user-icon[data-modal-open]`'s background-image — that rule is untouched
+   and still supplies the glyph; this just gives the button room to also show
+   the label text next to it and switches the shape from a circle to a pill.
+   Signed IN, #nav-user-label is removed from the flow via `hidden`, and the
+   34px circle from section 11 (header chrome) applies as before. */
+html body .header .user-icon[data-modal-open] {
+  width: auto !important;
+  height: 32px !important;
+  flex: 0 0 auto !important;
+  padding: 0 12px 0 30px !important;
+  border-radius: 16px !important;
+  background-position: 8px center !important;
+  background-color: transparent;
+}
+.header #nav-user-label {
+  font-family: var(--font-body);
+  font-size: .875rem;
+  font-weight: 600;
+  color: var(--header-fg);
+}
