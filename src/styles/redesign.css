@@ -223,7 +223,10 @@ html body .auth-link button {
    started at 32px while the header started at 120px and the card grid at 152px:
    four different left edges on one page. The hero now rides the same rail as
    everything else, and the *text* is what carries a measure. */
-.hero { min-height: 0 !important; padding: clamp(3rem, 6vw, 5rem) 0 clamp(2.5rem, 5vw, 3.5rem) !important; }
+/* S2 (Phase 8, spec §6.5): bottom padding was clamp(2.5rem,5vw,3.5rem) (~40-56px),
+   leaving too much dead space before the rack section starts. Tightened to
+   clamp(20px,3vw,36px) per the spec's target value. */
+.hero { min-height: 0 !important; padding: clamp(3rem, 6vw, 5rem) 0 clamp(20px, 3vw, 36px) !important; }
 .hero-content {
   text-align: left !important;
   max-width: var(--container-max) !important;
