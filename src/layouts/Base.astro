@@ -7,7 +7,7 @@
 // Fonts are self-hosted via @fontsource (fixes D12 — the legacy site loaded
 // three families render-blocking from a third-party CDN on every page).
 //
-// canonical is extensionless to match the hrefs Header/Footer emit — see
+// canonical is extensionless to match the hrefs Nav/Footer emit — see
 // IMPLEMENTATION.md §0.1 for why: pairing extensionless links with a .html
 // canonical is self-contradictory for search engines, confirmed live that
 // GitHub Pages serves both forms, so this is a consistency fix, not a new
@@ -18,8 +18,10 @@ import '../styles/legacy.css';
 import '../styles/redesign.css';
 import '../styles/globals.css';
 import SiteBg from '../components/SiteBg.astro';
-import Header from '../components/Header.astro';
-import Footer from '../components/Footer.astro';
+import { Nav } from '../components/shell/Nav';
+import { Footer } from '../components/shell/Footer';
+import { Toaster } from '../components/shell/Toaster';
+import { AuthDialog } from '../components/auth/AuthDialog';
 
 interface Props {
   title: string;
@@ -52,10 +54,10 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
     // stylesheet is parsed, so a stored preference never flashes the wrong
     // theme on load/navigation. Mirrors getTheme()'s key/default in
     // ../lib/storage.ts — keep the two in sync if that logic ever changes.
-    // initTheme() (see the bottom script) re-applies the same value to both
-    // <html> and <body> at DOMContentLoaded; since both read the same
-    // storage key with the same default, it recomputes the same value and
-    // never flips it.
+    // <body> can't be touched this early (it doesn't exist yet); Nav.tsx's
+    // mount effect (Phase 5) re-applies the same value to both <html> and
+    // <body> once React hydrates, using the same storage key/default, so it
+    // recomputes the same value and never flips it.
     (function () {
       try {
         var theme = localStorage.getItem('fynoptic-theme');
@@ -83,30 +85,41 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
 <body data-theme="dark">
   <a href="#main" class="skip-link">Skip to content</a>
   <SiteBg />
-  <Header />
+  <Nav client:load />
   <main id="main" tabindex="-1">
     <slot />
   </main>
-  <div class="toast-container" aria-live="polite" aria-atomic="true"></div>
+  <Toaster client:load />
   <Footer />
+  <AuthDialog client:load />
 
   <script>
-    import { initNav } from '../lib/nav';
-    import { initTheme } from '../lib/theme';
+    // Phase 5: initNav, initModals's login/signup/reset wiring, initAuthUI
+    // and initToasts are retired — Nav/AuthDialog/Toaster above cover all of
+    // it. Two imperative calls remain:
+    //   - applyA11y(): still DOM-only (body.hc/body.dyslexia), no React
+    //     consumer of prefsStore exists yet.
+    //   - initModals(): NOT retired, despite Phase 5's plan text. It's still
+    //     the only thing giving Escape/backdrop-click to every modal that
+    //     hasn't been converted yet — practice.astro's #end-session-modal
+    //     (practice.spec.ts pins Escape hiding it), course-one's modals, and
+    //     the flashcard/practice/index/about fixit/report/writer stubs. See
+    //     the comment atop lib/modal.ts for how it now steps aside for
+    //     Radix-owned (login/signup/reset) modals instead of fighting them.
+    //   - initAuthWatcher(): boots ensureAuthReady() + the onAuthStateChanged
+    //     subscription authStore needs. Nothing else calls this — Nav and
+    //     AuthDialog both read authStore via useAuth()/its store directly,
+    //     they don't set it up.
+    // initTheme() is gone: the pre-paint script in <head> plus useTheme()
+    // (via Nav's theme button) now cover every case that used to need it.
     import { initModals } from '../lib/modal';
     import { initAuthWatcher } from '../lib/auth';
-    import { initAuthUI } from '../lib/auth-ui';
-    import { initToasts } from '../lib/toast';
     import { applyA11y } from '../lib/a11y';
 
     document.addEventListener('DOMContentLoaded', () => {
-      initTheme();
       applyA11y();
-      initNav();
       initModals();
       initAuthWatcher();
-      initAuthUI();
-      initToasts();
     });
   </script>
 </body>

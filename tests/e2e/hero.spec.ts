@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 // rendered <a> (see src/components/ui/button.tsx + the legacy.css commit
 // that keys off this same attribute). The homepage header nav also has an
 // `<a href="/courses">Start the free course</a>` (desktop AND mobile menu
-// copies, in src/components/Header.astro), so `a[href="/courses"]` alone is
+// copies, in src/components/shell/Nav.tsx), so `a[href="/courses"]` alone is
 // ambiguous in strict mode. Scoping to `[data-slot="button"]` selects only
 // the hero's shadcn-rendered CTA.
 const PRIMARY_CTA_SELECTOR = 'a[data-slot="button"][href="/courses"]';

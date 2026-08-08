@@ -3,6 +3,20 @@
 // opened it (keyboard users used to get dumped at the top of the document),
 // and the global [data-modal-open]/[data-modal-close]/[data-modal-switch]
 // click delegation plus the Escape-key handler.
+//
+// Phase 5: the login/signup/reset modals moved to Modal.tsx (Radix Dialog)
+// and are no longer opened/closed through this module — but initModals()
+// keeps running from Base.astro because practice.astro's #end-session-modal,
+// flashcard.astro's #fixit/#report/#writer stubs, and course-one's modals
+// are all still vanilla and still depend on this file's global Escape/
+// backdrop-click delegation (practice.spec.ts pins Escape hiding
+// #end-session-modal on exactly this handler). Every element Radix's
+// Dialog.Content renders carries `data-state="open"|"closed"` — used below
+// to make this module a no-op on any modal React already owns, so the two
+// don't fight over the same node (a real bug: this module's lockBody()/
+// unlockBody() track scroll position in a variable that's only ever set by
+// its own openModalElement(), so acting on a Radix-opened modal it never
+// opened would restore scroll to 0 instead of the position at open time).
 
 const MODAL_FOCUSABLE = 'a, button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
@@ -64,6 +78,12 @@ function resolveModal(target: string | HTMLElement): HTMLElement | null {
   return typeof target === 'string' ? document.getElementById(target) : target;
 }
 
+// True for any `.modal` Radix's Dialog.Content rendered (see the module
+// comment above) — this module must never act on those.
+function isRadixOwned(modal: HTMLElement): boolean {
+  return modal.hasAttribute('data-state');
+}
+
 function openModalElement(modal: HTMLElement, opener?: HTMLElement): void {
   if (opener) modalOpeners.set(modal, opener);
   clearFormErrors(modal);
@@ -84,17 +104,22 @@ function closeModalElement(modal: HTMLElement): void {
 
 export function openModal(target: string | HTMLElement, opener?: HTMLElement): void {
   const modal = resolveModal(target);
-  if (modal) openModalElement(modal, opener);
+  if (modal && !isRadixOwned(modal)) openModalElement(modal, opener);
 }
 
 export function closeModal(target?: string | HTMLElement): void {
   if (target === undefined) {
-    const open = document.querySelector<HTMLElement>('.modal:not([hidden])');
+    // Skip past any Radix-owned modal to the next one this module actually
+    // opened — relevant if a Radix dialog and a vanilla one both happen to
+    // be open at once.
+    const open = Array.from(document.querySelectorAll<HTMLElement>('.modal:not([hidden])')).find(
+      (modal) => !isRadixOwned(modal),
+    );
     if (open) closeModalElement(open);
     return;
   }
   const modal = resolveModal(target);
-  if (modal) closeModalElement(modal);
+  if (modal && !isRadixOwned(modal)) closeModalElement(modal);
 }
 
 export function initModals(): void {
@@ -135,7 +160,7 @@ export function initModals(): void {
     }
 
     // click on the backdrop itself closes the modal
-    if (target.classList.contains('modal') && target instanceof HTMLElement) {
+    if (target.classList.contains('modal') && target instanceof HTMLElement && !isRadixOwned(target)) {
       closeModalElement(target);
     }
   });

@@ -3,8 +3,11 @@ import { test, expect, type Page } from '@playwright/test';
 // Requires the Firebase Auth emulator running (`firebase emulators:start
 // --only auth`) and the site built/served with PUBLIC_AUTH_EMULATOR set to
 // the emulator's URL — see src/lib/auth.ts's guard and firebase.json.
-// Characterizes lib/auth.ts + lib/auth-ui.ts against the current vanilla
-// modal markup, before any React conversion.
+// Characterizes lib/auth.ts against AuthDialog.tsx's three Radix-modal auth
+// forms (Phase 5 replaced auth-ui.ts's template-literal markup + modal.ts's
+// `data-modal-switch` delegation with openAuthDialog()-driven React state —
+// the switch links below are now plain buttons, matched by their text
+// rather than a data attribute that no longer exists).
 
 function uniqueEmail(): string {
   return `test-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
@@ -14,7 +17,7 @@ const PASSWORD = 'correct-password-123';
 
 async function signUp(page: Page, email: string): Promise<void> {
   await page.locator('#user-btn').click();
-  await page.locator('[data-modal-switch="signup-modal"]').click();
+  await page.getByRole('button', { name: 'Create an account' }).click();
   await page.locator('#signup-email').fill(email);
   await page.locator('#signup-password').fill(PASSWORD);
   await page.locator('#signup-confirm').fill(PASSWORD);
@@ -24,7 +27,7 @@ async function signUp(page: Page, email: string): Promise<void> {
 
 // Both #user-btn's onclick ('/profile') and #logout-btn's handler
 // (logout() then location.replace('/')) navigate via script, not a plain
-// <a href>. #user-btn's markup is shared across every page (Header.astro),
+// <a href>. #user-btn's markup is shared across every page (Nav.tsx),
 // so checking its DOM state ALONE is not enough proof the navigation
 // actually landed: auth.ts's onAuthStateChanged watcher updates
 // data-modal-open on whichever page is current the instant the auth SDK
@@ -59,7 +62,7 @@ test.describe('sign up, sign in, sign out', () => {
 
     await userBtn.click();
     await expect(page.locator('#login-modal')).toBeVisible();
-    await page.locator('[data-modal-switch="signup-modal"]').click();
+    await page.getByRole('button', { name: 'Create an account' }).click();
     await expect(page.locator('#signup-modal')).toBeVisible();
 
     await page.locator('#signup-email').fill(email);
@@ -126,7 +129,7 @@ test.describe('error surfaces', () => {
   test('password reset for an unknown email still reports success (enumeration guard)', async ({ page }) => {
     await page.goto('/');
     await page.locator('#user-btn').click();
-    await page.locator('[data-modal-switch="reset-modal"]').click();
+    await page.getByRole('button', { name: 'Forgot your password?' }).click();
     await expect(page.locator('#reset-modal')).toBeVisible();
 
     await page.locator('#reset-email').fill(`no-such-account-${Date.now()}@example.com`);
@@ -173,6 +176,11 @@ test.describe('submit locking', () => {
 
     releaseResponse();
     await expect(page.locator('.toast-container .toast')).toHaveText('Signed in!', { timeout: 5000 });
-    await expect(submit).not.toHaveAttribute('aria-busy', /.*/);
+    // Radix unmounts Dialog.Content on close (unlike the old modal.ts,
+    // which only ever toggled `hidden` and left the node — and its
+    // aria-busy — in the DOM), so #login-submit itself is gone by now, not
+    // just un-busied. Asserting the modal is closed is the stronger, still-
+    // accurate check.
+    await expect(page.locator('#login-modal')).toBeHidden();
   });
 });

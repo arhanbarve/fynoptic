@@ -24,7 +24,7 @@ import Base from '../layouts/Base.astro';
          would silently fail to match most of the page.
       2. The @media print rule and the body.hc/body.dyslexia rules target
          .header/.footer/.nav/.toast-container/<body> — all rendered by
-         Header.astro/Footer.astro/Base.astro, outside this component's
+         Nav.tsx/Footer.tsx/Toaster.tsx/Base.astro, outside this component's
          own subtree, so scoping couldn't reach them either way.
     (Same is:global choice src/pages/courses.astro already made for its
     own page-specific style block.)

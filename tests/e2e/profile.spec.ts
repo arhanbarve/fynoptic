@@ -15,7 +15,7 @@ const PASSWORD = 'correct-password-123';
 async function signUpFromHome(page: Page, email: string): Promise<void> {
   await page.goto('/');
   await page.locator('#user-btn').click();
-  await page.locator('[data-modal-switch="signup-modal"]').click();
+  await page.getByRole('button', { name: 'Create an account' }).click();
   await page.locator('#signup-email').fill(email);
   await page.locator('#signup-password').fill(PASSWORD);
   await page.locator('#signup-confirm').fill(PASSWORD);
