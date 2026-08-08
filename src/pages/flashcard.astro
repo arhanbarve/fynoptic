@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import '../styles/flashcards.css';
+import { Flashcards } from '../components/flashcards/Flashcards';
 ---
 <Base
   title="Flashcards • Fynoptic"
@@ -18,164 +19,12 @@ import '../styles/flashcards.css';
       <h1>Practice Flashcards</h1>
       <p class="lead">Pick your units, choose a mode, and start a session. Your progress is saved automatically.</p>
 
-      <!-- WIZARD: ONE SCREEN ONLY, IN-PLACE -->
-      <div class="fc-controls card is-wizard" role="region" aria-label="Flashcard controls" data-step="1">
-        <div class="fc-grid">
-          <!-- STEP 1: Units -->
-          <div class="fc-block" id="block-units">
-            <h3 class="fc-label">Units</h3>
-            <div id="unit-list" class="unit-list" aria-live="polite"></div>
-            <div class="fc-actions">
-              <button id="select-all" class="btn btn-ghost">Select all</button>
-              <button id="clear-all" class="btn btn-ghost">Clear</button>
-              <button id="confirm-units" class="btn btn-primary btn-next">Continue</button>
-            </div>
-          </div>
-
-          <!-- STEP 2: Mode -->
-          <div class="fc-block" id="block-mode" hidden aria-hidden="true">
-            <h3 class="fc-label">Mode</h3>
-            <div class="mode-row" role="group" aria-label="Practice mode">
-              <label class="mode-chip">
-                <input type="radio" name="mode" value="mc" checked />
-                <span>Multiple Choice</span>
-              </label>
-              <label class="mode-chip">
-                <input type="radio" name="mode" value="fitb" />
-                <span>Fill in the Blank</span>
-              </label>
-            </div>
-
-            <div class="opt-row">
-              <label class="toggle">
-                <input type="checkbox" id="shuffle" checked />
-                <span>Shuffle deck</span>
-              </label>
-            </div>
-
-            <div class="fc-actions">
-              <button id="confirm-mode" class="btn btn-primary btn-next">Continue</button>
-              <button id="start-btn" class="btn btn-primary">Start Session</button>
-            </div>
-          </div>
-          <!-- STEP 3: Start -->
-          <div class="fc-block" id="block-start" hidden aria-hidden="true">
-            <h3 class="fc-label">Ready to begin?</h3>
-
-            <div class="start-hero">
-              <p id="start-summary" class="muted"></p>
-              <button id="start-btn-big" class="btn btn-primary btn-giant">Start Session</button>
-            </div>
-          </div>
-
-          <!-- Progress (hidden in wizard) -->
-
-        </div>
-      </div>
-      <aside class="fc-block fc-progress" id="block-progress" hidden aria-hidden="true">
-        <h3 class="fc-label">Progress</h3>
-        <div class="bar"><div id="progress-fill" class="fill" style="--p:0%"></div></div>
-        <ul class="stats">
-          <li><strong id="stat-total">0</strong><span>Total</span></li>
-          <li><strong id="stat-done">0</strong><span>Completed</span></li>
-          <li><strong id="stat-correct">0</strong><span>Correct</span></li>
-          <li><strong id="stat-acc">0%</strong><span>Accuracy</span></li>
-          <li><strong id="stat-streak">0</strong><span>Streak</span></li>
-        </ul>
-      </aside>
-      <!-- Flashcard stage -->
-      <div id="fc-stage" class="fc-stage card" hidden aria-live="polite">
-        <div class="fc-top">
-          <div class="crumbs"><span id="crumbs-text">0 / 0</span></div>
-
-          <!-- quiz-only actions -->
-          <div class="stage-actions">
-            <button id="reset-progress" class="btn btn-ghost" type="button" title="Clear saved progress">
-              Reset Progress
-            </button>
-            <button id="end-btn" class="btn btn-ghost" type="button" hidden>
-              End Session
-            </button>
-          </div>
-        </div>
-
-
-        <div class="fc-card" role="group" aria-label="Flashcard">
-          <div id="term-side" class="side is-front">
-            <p class="prompt-label">Term</p>
-            <div id="term-text" class="prompt-text">—</div>
-          </div>
-          <div id="def-side" class="side">
-            <p class="prompt-label">Definition</p>
-            <div id="def-text" class="prompt-text">—</div>
-          </div>
-        </div>
-
-        <!-- Answering area -->
-        <div id="answer-area">
-          <button id="mc-toggle-answer" class="pill-toggle" type="button"></button>
-
-          <!-- MC -->
-          <div id="mc-area" class="mc-area" role="group" aria-label="Multiple choice options"></div>
-
-          <!-- Fill-in -->
-          <form id="fitb-form" class="fitb-area" hidden>
-            <label for="fitb-input" class="sr-only">Type your answer</label>
-            <input id="fitb-input" type="text" placeholder="Type the term…" autocomplete="off" />
-            <button class="btn btn-primary" type="submit">Check</button>
-            <button class="btn btn-ghost" type="button" id="fitb-hint">Hint</button>
-          </form>
-
-          <div id="feedback" class="feedback" aria-live="polite" hidden></div>
-        </div>
-
-        <div class="fc-nav">
-          <button id="prev-btn" class="btn btn-ghost">← Prev</button>
-          <div class="gap"></div>
-          <button id="flip-btn" class="btn btn-primary btn-flip-big" type="button">Flip Card</button>
-          <div class="gap"></div>
-          <button id="next-btn" class="btn btn-ghost">Next →</button>
-        </div>
-
-        <div class="fc-bottom">
-          <button id="restart-btn" class="btn btn-ghost">Restart deck</button>
-        </div>
-      </div>
-
-      <!-- Empty state -->
-      <div id="empty-state" class="card empty-state" hidden>
-        <h3>No cards yet</h3>
-        <p class="muted">Choose at least one unit and click <strong>Start Session</strong>.</p>
-      </div>
+      <!-- <Flashcards client:load /> — see src/components/flashcards/Flashcards.tsx.
+           client:load, not client:visible: this is the entire point of the
+           page and sits above the fold. It owns the wizard, the in-session
+           stage, the reset-progress dialog and the summary modal. -->
+      <Flashcards client:load />
     </section>
   </div>
-
-  <!-- Modals -->
-  <div id="fixit-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="fixit-title"></div>
-  <div id="report-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="report-title"></div>
-  <div id="writer-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="writer-title"></div>
-
-  <!-- Session Summary Modal -->
-  <div id="summary-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="summary-title">
-    <div class="dialog summary-dialog" role="document">
-      <button class="modal-close" data-modal-close aria-label="Close">&times;</button>
-      <h2 id="summary-title">Session Summary</h2>
-
-      <div class="summary-grid" id="summary-grid">
-        <!-- filled by JS -->
-      </div>
-
-      <div class="summary-units" id="summary-units" aria-live="polite">
-        <!-- filled by JS with selected unit chips -->
-      </div>
-    </div>
-  </div>
-
-  <script>
-    import { initFlashcards } from '../islands/flashcard';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      initFlashcards();
-    });
-  </script>
 </Base>
+
