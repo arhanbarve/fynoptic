@@ -25,8 +25,10 @@
 //
 // Links preserved from the old Footer.astro (courses, articles, flashcard,
 // practice, the contact line) — see that file's history — plus About and
-// the Fix-it Bot, which existed in the nav but never in the footer. No links
-// to /accessibility or /privacy: those pages don't exist yet (Phase 9).
+// the Fix-it Bot, which existed in the nav but never in the footer.
+// /accessibility and /privacy (Phase 9) sit in this same "Fynoptic" column,
+// alongside About and the contact line — the standard placement for
+// legal/meta pages in a site footer.
 export function Footer() {
   return (
     <footer className="footer">
@@ -66,6 +68,8 @@ export function Footer() {
           <ul className="footer-links">
             <li><a href="/about">About</a></li>
             <li><a href="/bot">Fix-it Bot</a></li>
+            <li><a href="/accessibility">Accessibility</a></li>
+            <li><a href="/privacy">Privacy</a></li>
           </ul>
           <p className="footer-contact">info@fynoptic.org</p>
         </div>

@@ -44,6 +44,8 @@ const PAGES = [
   'practice.html',
   'profile.html',
   'bot.html',
+  'accessibility.html',
+  'privacy.html',
   'articles/bnpl-real-rules.html',
 ];
 
