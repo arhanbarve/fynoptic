@@ -15,8 +15,12 @@
     "check": "astro check",
     "lint": "eslint . --ext .js,.ts,.astro",
     "format": "prettier --write \"**/*.{ts,astro,css,md,json}\"",
-    "test:visual": "node scripts/visual-diff.mjs",
-    "test:e2e": "playwright test"
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:visual:capture": "node scripts/visual-diff.mjs --capture-baseline",
+    "test:visual:diff": "node scripts/visual-diff.mjs --diff",
+    "test:all": "npm run test:unit && npm run test:e2e && npm run test:visual:diff"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.2",
@@ -40,11 +44,17 @@
     "@fontsource-variable/sora": "^5",
     "@fontsource/spectral": "^5",
     "@playwright/test": "^1",
+    "@vitest/coverage-v8": "^4",
     "eslint": "^9",
     "eslint-plugin-astro": "^1",
+    "firebase-tools": "^15",
+    "jsdom": "^30",
+    "pixelmatch": "^7",
+    "pngjs": "^7",
     "prettier": "^3",
     "prettier-plugin-astro": "^0",
     "typescript": "^5",
+    "vitest": "^4",
     "zod": "^3"
   }
 }

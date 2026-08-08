@@ -8,6 +8,13 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # Wired through to the build so the e2e/emulator specs (auth.spec.ts,
+      # profile.spec.ts) connect to the local Firebase Auth emulator instead
+      # of the real project. PUBLIC_-prefixed Astro/Vite env vars are inlined
+      # at build time, so this has to be set before `npm run build`, not just
+      # before the test run.
+      PUBLIC_AUTH_EMULATOR: 127.0.0.1:9099
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,3 +24,16 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
+      - run: npm run test:unit
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: e2e (Firebase Auth emulator)
+        run: npx firebase emulators:exec --only auth "npm run test:e2e"
+      - run: npm run test:visual:capture
+      - run: npm run test:visual:diff
+      - name: Upload visual diff artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff
+          path: tests/visual-diff/
