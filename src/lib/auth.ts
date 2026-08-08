@@ -29,6 +29,8 @@ import {
   type UserCredential,
 } from 'firebase/auth';
 
+import { createStore } from './store';
+
 // Flip to true ONLY after completing the steps in FIREBASE_SETUP.md (Firebase
 // Console -> Authentication -> Settings -> Authorized domains + custom auth
 // domain, plus DNS). Turning this on before DNS resolves breaks Google sign-in.
@@ -126,23 +128,39 @@ export function logout(): Promise<void> {
 // Boot order matters: persistence has to be settled before Firebase finishes a
 // redirect, and "auth-ready" only fires once both are done. Firing it early was
 // the old race.
-(async () => {
-  try {
-    await setUpPersistence();
-  } catch (err) {
-    console.error('Auth persistence setup failed:', err);
-  }
+//
+// Phase 4: this used to be a module-level async IIFE, which touched `window`
+// at import time and broke SSR for anything that statically imports this
+// module. Now it's an idempotent, lazily-invoked function instead: the setup
+// body runs at most once per page load (guarded by authReadyPromise); every
+// call — concurrent or later — gets that same promise. Not auto-invoked here.
+// Phase 5 calls it from a client effect; today `initAuthWatcher()` calls it as
+// a compatibility shim (see comment there) since auth-ui.ts's `onAuthReady()`
+// still expects the old auto-fire-on-import behavior.
+let authReadyPromise: Promise<void> | null = null;
 
-  try {
-    // Legacy path: completes a redirect started by an older build of the site.
-    // New sign-ins use popups only.
-    await getRedirectResult(auth);
-  } catch (err) {
-    console.error('Redirect sign-in failed:', errorMessage(err), err);
-  }
+export function ensureAuthReady(): Promise<void> {
+  if (!authReadyPromise) {
+    authReadyPromise = (async () => {
+      try {
+        await setUpPersistence();
+      } catch (err) {
+        console.error('Auth persistence setup failed:', err);
+      }
 
-  window.dispatchEvent(new Event('auth-ready'));
-})();
+      try {
+        // Legacy path: completes a redirect started by an older build of the site.
+        // New sign-ins use popups only.
+        await getRedirectResult(auth);
+      } catch (err) {
+        console.error('Redirect sign-in failed:', errorMessage(err), err);
+      }
+
+      window.dispatchEvent(new Event('auth-ready'));
+    })();
+  }
+  return authReadyPromise;
+}
 
 // Initials from a display name, else the local part of the email. Two
 // characters max.
@@ -194,8 +212,35 @@ function showAvatar(photoURL: string | null | undefined, user: User | null): voi
   useInitials();
 }
 
+// Phase 4: state substrate for a future React consumer (Phase 5's Nav.tsx).
+// Fed by its own onAuthStateChanged subscription — deliberately independent
+// of the DOM-manipulating one in initAuthWatcher() below and the second one
+// on /profile (src/islands/profile.ts). Phase 5 retires both of those in
+// favor of this store; for now all three run side by side, unconsolidated.
+export const authStore = createStore<{ user: User | null; status: 'loading' | 'in' | 'out' }>({
+  user: null,
+  status: 'loading',
+});
+
+function initAuthStore(): void {
+  onAuthStateChanged(auth, (user) => {
+    authStore.set({ user, status: user ? 'in' : 'out' });
+  });
+}
+
 // Reflect auth state in the header button.
 export function initAuthWatcher(): void {
+  // Compatibility shim: ensureAuthReady() used to run unconditionally at
+  // module import as an async IIFE. Now that it's an explicit call, something
+  // has to trigger it so auth-ui.ts's 'auth-ready' listener (registered at
+  // its own import time, before this runs) still fires instead of timing out
+  // after 8s. initAuthWatcher() is already the first of the two calls Base.astro
+  // makes off this module, so it's the least-disruptive place for it until
+  // Phase 5 moves the call into a client effect. Fire-and-forget: failures are
+  // already logged inside ensureAuthReady().
+  void ensureAuthReady();
+  initAuthStore();
+
   onAuthStateChanged(auth, (user) => {
     const btn = document.getElementById('user-btn');
     const img = document.getElementById('nav-avatar') as HTMLImageElement | null;
