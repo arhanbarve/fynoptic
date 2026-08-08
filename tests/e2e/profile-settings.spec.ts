@@ -40,6 +40,10 @@ function uniqueEmail(): string {
 const PASSWORD = 'correct-password-123';
 const PROJECT_ID = 'financefirst-ee059';
 const EMULATOR_HOST = 'http://127.0.0.1:9099';
+// Same 1x1 transparent PNG mockStorageUpload fulfills for real decodable-image
+// responses below, as a data: URI so it decodes with no network round-trip.
+const ONE_PIXEL_PNG_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
 async function signUpFromHome(page: Page, email: string): Promise<void> {
   await page.goto('/');
@@ -209,12 +213,20 @@ test.describe('name save propagates to nav (authStore push)', () => {
     await expect(page.locator('#nav-avatar')).toBeHidden();
     await expect(page.locator('#nav-initials')).toBeVisible();
 
-    await page.locator('#input-photo').fill('https://example.com/avatar.png');
+    // A data: URI, not a real host: Nav.tsx's <img onError> hides the avatar
+    // and falls back to initials if the photo URL doesn't actually decode as
+    // an image (see the mocked-upload tests below, which fulfill a real
+    // decodable PNG for exactly this reason) — a live http(s) URL here would
+    // 404 against a real network and make this assertion fail for a reason
+    // unrelated to what this test is characterizing (the authStore-push
+    // propagation, not image-loading). A data: URI loads with no network
+    // round-trip at all and always decodes.
+    await page.locator('#input-photo').fill(ONE_PIXEL_PNG_DATA_URL);
     await page.locator('#settings-submit').click();
     await expect(page.locator('.toast-container .toast')).toHaveText('Profile updated');
 
     await expect(page.locator('#nav-avatar')).toBeVisible();
-    await expect(page.locator('#nav-avatar')).toHaveAttribute('src', 'https://example.com/avatar.png');
+    await expect(page.locator('#nav-avatar')).toHaveAttribute('src', ONE_PIXEL_PNG_DATA_URL);
     await expect(page.locator('#nav-initials')).toBeHidden();
   });
 });
