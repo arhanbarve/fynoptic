@@ -1,80 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { shuffle } from '../../src/lib/shuffle';
+import { buildDeck, buildMcOptions, checkFitbAnswer } from '../../src/hooks/useFlashcardDeck';
 import type { Flashcard } from '../../src/types';
 
-// The pieces under test here are unexported internals of
-// src/islands/flashcard.ts closed over DOM elements (`els.*`) that don't
-// exist outside a rendered flashcard.astro page. Per Phase 1e they're
-// pinned via faithful, byte-for-byte-where-possible copies of the
-// algorithmic bodies (cited to source line numbers) rather than modifying
-// flashcard.ts, which this phase does not touch.
-
-// ---- fill-in-the-blank answer comparison (flashcard.ts:756-764) ----
-// `val` is trimmed; `target` is NOT. Both are lowercased only when
-// `ciChecked` is true. In production `els.caseInsensitive` is always null
-// (#case-insensitive has no markup anywhere — flashcard.ts:214), so
-// `ciChecked` is unconditionally `true` today; that's pinned below too.
-function checkFitbAnswer(rawInput: string, target: string, caseInsensitiveEl: { checked: boolean } | null): boolean {
-  const val = (rawInput || '').trim();
-  const ciChecked = caseInsensitiveEl ? !!caseInsensitiveEl.checked : true;
-  const normalize = (s: string): string => (ciChecked ? s.toLowerCase() : s);
-  return normalize(val) === normalize(target);
-}
-
-// ---- deck construction (flashcard.ts:582-589) ----
-interface DeckCard extends Flashcard {
-  unit: string;
-  id: string;
-}
-
-function buildDeck(units: string[], flashcardUnits: Record<string, Flashcard[]>): DeckCard[] {
-  const deck: DeckCard[] = [];
-  units.forEach((u) => {
-    (flashcardUnits[u] ?? []).forEach((card) => {
-      deck.push({ ...card, unit: u, id: `${u}::${card.term}` });
-    });
-  });
-  return deck;
-}
-
-// ---- multiple-choice distractors (flashcard.ts:690-705) ----
-function buildMcOptions(card: Flashcard, pool: Flashcard[], useTermAnswers: boolean): string[] {
-  const correctValue = useTermAnswers ? card.term : card.definition;
-  const candidates = pool.map((c) => (useTermAnswers ? c.term : c.definition)).filter((v) => v && v !== correctValue);
-
-  const values = new Set<string>([correctValue]);
-  while (values.size < 4 && candidates.length) {
-    const i = Math.floor(Math.random() * candidates.length);
-    values.add(candidates[i]!);
-    candidates.splice(i, 1);
-  }
-  return shuffle(Array.from(values));
-}
+// Phase 10e extracted buildDeck/checkFitbAnswer/buildMcOptions out of
+// src/islands/flashcard.ts (closed over DOM elements and a module-level
+// `state`) into src/hooks/useFlashcardDeck.ts as real exported functions.
+// These tests now import that real module instead of the byte-for-byte
+// copies Phase 1e pinned this file with — same algorithm, same assertions,
+// no copy left to drift.
+//
+// checkFitbAnswer dropped the dead `els.caseInsensitive` parameter entirely
+// (Appendix E — `#case-insensitive` has no markup anywhere, so that read
+// was unconditionally the case-insensitive branch); the real function
+// always lowercases both sides, matching what every one of these tests
+// already exercised (none of them ever passed a truthy checked object).
 
 describe('fill-in-the-blank answer comparison', () => {
   it('trims the input but not the target — a trailing target space fails a trimmed match', () => {
-    expect(checkFitbAnswer('CD', 'CD ', null)).toBe(false);
+    expect(checkFitbAnswer('CD', 'CD ')).toBe(false);
   });
 
   it('a missing trailing period on the input fails', () => {
-    expect(checkFitbAnswer('opportunity cost', 'opportunity cost.', null)).toBe(false);
+    expect(checkFitbAnswer('opportunity cost', 'opportunity cost.')).toBe(false);
   });
 
   it('an internal double space in the target fails a single-spaced input', () => {
-    expect(checkFitbAnswer('time value of money', 'time  value of money', null)).toBe(false);
+    expect(checkFitbAnswer('time value of money', 'time  value of money')).toBe(false);
   });
 
   it('dropped parentheses fail — "Certificate of deposit (CD)" needs its parens', () => {
-    expect(checkFitbAnswer('Certificate of deposit CD', 'Certificate of deposit (CD)', null)).toBe(false);
+    expect(checkFitbAnswer('Certificate of deposit CD', 'Certificate of deposit (CD)')).toBe(false);
   });
 
   it('an exact match (including trimmed leading/trailing whitespace on input) passes', () => {
-    expect(checkFitbAnswer('  Certificate of deposit (CD)  ', 'Certificate of deposit (CD)', null)).toBe(true);
+    expect(checkFitbAnswer('  Certificate of deposit (CD)  ', 'Certificate of deposit (CD)')).toBe(true);
   });
 
   it('case-insensitivity is unconditional today — #case-insensitive has no markup, so the element is always null', () => {
-    expect(checkFitbAnswer('cd', 'CD', null)).toBe(true);
-    expect(checkFitbAnswer('CERTIFICATE', 'certificate', null)).toBe(true);
+    expect(checkFitbAnswer('cd', 'CD')).toBe(true);
+    expect(checkFitbAnswer('CERTIFICATE', 'certificate')).toBe(true);
   });
 });
 
