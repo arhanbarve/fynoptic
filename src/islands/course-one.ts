@@ -17,10 +17,13 @@
 //
 //  - The a11y bar (#toggle-hc/#toggle-dys) and #learner-name/#save-name
 //    have no markup anywhere in courseone.html (checked both this
-//    worktree's and auth-overhaul's copies) — the bindings below are
-//    `?.`-guarded no-ops, same as the source. applyA11y() still runs
+//    worktree's and auth-overhaul's copies). The #toggle-hc/#toggle-dys
+//    change-listeners were dead wiring (bound to elements that don't
+//    exist) and have been removed; that behavior now lives site-wide in
+//    ../lib/a11y.ts, applied from Base.astro. applyA11y() here still runs
 //    unconditionally at boot since it only reads localStorage and toggles
 //    body classes; it doesn't require the toggle inputs to exist.
+//    #learner-name/#save-name remain `?.`-guarded no-ops, same as the source.
 //
 //  - The `sections` map from the source (an object of module-id ->
 //    element, built but never read anywhere) is dropped — it's dead code
@@ -771,18 +774,6 @@ export function initCourseOne(): void {
 
   /* A11y + name (defensive — see file header) */
   applyA11y();
-  $<HTMLInputElement>('#toggle-hc')?.addEventListener('change', (e) => {
-    if (e.currentTarget instanceof HTMLInputElement) {
-      localStorage.setItem('ff_a11y_hc', e.currentTarget.checked ? '1' : '0');
-      applyA11y();
-    }
-  });
-  $<HTMLInputElement>('#toggle-dys')?.addEventListener('change', (e) => {
-    if (e.currentTarget instanceof HTMLInputElement) {
-      localStorage.setItem('ff_a11y_dys', e.currentTarget.checked ? '1' : '0');
-      applyA11y();
-    }
-  });
 
   const learnerNameInput = $<HTMLInputElement>('#learner-name');
   if (learnerNameInput) learnerNameInput.value = localStorage.getItem(NAME_KEY) || '';

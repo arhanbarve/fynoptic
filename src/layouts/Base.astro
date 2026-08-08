@@ -51,6 +51,22 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
 <html lang="en" class="no-js">
 <head>
   <meta charset="UTF-8" />
+  <script is:inline>
+    // Pre-paint theme: sets data-theme on <html> synchronously, before any
+    // stylesheet is parsed, so a stored preference never flashes the wrong
+    // theme on load/navigation. Mirrors getTheme()'s key/default in
+    // ../lib/storage.ts — keep the two in sync if that logic ever changes.
+    // initTheme() (see the bottom script) re-applies the same value to both
+    // <html> and <body> at DOMContentLoaded; since both read the same
+    // storage key with the same default, it recomputes the same value and
+    // never flips it.
+    (function () {
+      try {
+        var theme = localStorage.getItem('fynoptic-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
+      } catch (e) {}
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="description" content={description} />
   <meta name="theme-color" content="#0B1220" />
@@ -85,9 +101,11 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
     import { initAuthWatcher } from '../lib/auth';
     import { initAuthUI } from '../lib/auth-ui';
     import { initToasts } from '../lib/toast';
+    import { applyA11y } from '../lib/a11y';
 
     document.addEventListener('DOMContentLoaded', () => {
       initTheme();
+      applyA11y();
       initNav();
       initModals();
       initAuthWatcher();

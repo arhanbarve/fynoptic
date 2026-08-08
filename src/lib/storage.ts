@@ -8,6 +8,8 @@ const COURSE_PROGRESS_KEY = 'ff_course_progress';
 const FIXIT_HISTORY_KEY = 'ff_fixit_history';
 const REPORTS_KEY = 'ff_reports';
 const THEME_KEY = 'fynoptic-theme';
+const A11Y_HC_KEY = 'ff_a11y_hc';
+const A11Y_DYS_KEY = 'ff_a11y_dys';
 
 export type Theme = 'dark' | 'light';
 
@@ -73,6 +75,40 @@ export function getTheme(): Theme {
 export function setTheme(theme: Theme): void {
   try {
     localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    // ignore
+  }
+}
+
+// ff_a11y_hc / ff_a11y_dys are legacy keys, stored as '1'/'0' strings (not
+// JSON) — same on-disk shape the original js/course-one.js used.
+export function getA11yHighContrast(): boolean {
+  try {
+    return localStorage.getItem(A11Y_HC_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setA11yHighContrast(enabled: boolean): void {
+  try {
+    localStorage.setItem(A11Y_HC_KEY, enabled ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+export function getA11yDyslexia(): boolean {
+  try {
+    return localStorage.getItem(A11Y_DYS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setA11yDyslexia(enabled: boolean): void {
+  try {
+    localStorage.setItem(A11Y_DYS_KEY, enabled ? '1' : '0');
   } catch {
     // ignore
   }
