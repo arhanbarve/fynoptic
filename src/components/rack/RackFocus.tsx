@@ -153,6 +153,56 @@ function mixColor(accent: string, focusedAmount: number): string {
   return `color-mix(in oklab, ${accent} ${pct}%, var(--muted-foreground, #8a8f98))`;
 }
 
+/**
+ * Panel head: the two-part stat + title that sits above each panel's
+ * description (spec §6.5 S3/S4). `RACK_ITEMS` has no CSS file of its own —
+ * this section is inline Tailwind throughout — so there is no `.rk-phead`
+ * class to retarget; this is that container's real equivalent. The stat's
+ * two halves are discrete spans joined by a separator span carrying
+ * `margin: 0 .5em` (S3), replacing what was a single letter-spaced string.
+ * The border-bottom is the "rule under the panel head" S4 describes;
+ * `paddingTop`/`paddingBottom` are its corrected values (14px bottom, 2px
+ * top) rather than the prototype's too-tight 11px/0.
+ */
+function PanelHead({
+  item,
+  statColor,
+  size = 'lg',
+}: {
+  item: RackItem;
+  statColor: string;
+  size?: 'lg' | 'sm';
+}) {
+  return (
+    <div
+      className="flex flex-col gap-2 border-b border-border"
+      style={{ paddingTop: '2px', paddingBottom: '14px' }}
+    >
+      <span
+        className={cn(
+          'font-medium uppercase tracking-wide [font-family:var(--mono-face)]',
+          size === 'lg' ? 'text-xs' : 'text-xs text-muted-foreground',
+        )}
+        style={size === 'lg' ? { color: statColor } : undefined}
+      >
+        {item.statPrimary}
+        <span aria-hidden="true" style={{ margin: '0 .5em' }}>
+          ·
+        </span>
+        {item.statSecondary}
+      </span>
+      <h3
+        className={cn(
+          'font-semibold text-foreground [font-family:var(--display-face)]',
+          size === 'lg' ? 'text-2xl' : 'text-xl',
+        )}
+      >
+        {item.title}
+      </h3>
+    </div>
+  );
+}
+
 interface PanelProps {
   item: RackItem;
   /** 0 = fully resolved/focused, 1 = fully defocused (mid cross-rack). */
@@ -181,15 +231,7 @@ function RackPanel({ item, d, incoming }: PanelProps) {
       style={style}
       aria-hidden={d >= 1 ? true : undefined}
     >
-      <span
-        className="text-xs font-medium uppercase tracking-wide [font-family:var(--mono-face)]"
-        style={{ color: mixColor(item.accent, 1 - d) }}
-      >
-        {item.stat}
-      </span>
-      <h3 className="text-2xl font-semibold text-foreground [font-family:var(--display-face)]">
-        {item.title}
-      </h3>
+      <PanelHead item={item} statColor={mixColor(item.accent, 1 - d)} />
       <p className="max-w-[42ch] text-sm text-muted-foreground sm:text-base">
         {item.description}
       </p>
@@ -410,12 +452,7 @@ function RackTabs({ items }: { items: readonly RackItem[] }) {
         aria-labelledby={`rack-tab-${active.id}`}
         className="flex flex-col gap-3 rounded-lg border border-border bg-card p-6"
       >
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground [font-family:var(--mono-face)]">
-          {active.stat}
-        </span>
-        <h3 className="text-xl font-semibold text-foreground [font-family:var(--display-face)]">
-          {active.title}
-        </h3>
+        <PanelHead item={active} statColor="var(--muted-foreground)" size="sm" />
         <p className="text-sm text-muted-foreground sm:text-base">{active.description}</p>
         <a
           href={active.href}

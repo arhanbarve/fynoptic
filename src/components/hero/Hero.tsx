@@ -141,6 +141,18 @@ export function Hero() {
           </Button>
         </div>
 
+        {/* Hero fine print (spec §6.2, S5). Missing from the original port —
+            no `46ch` cap here on purpose: the column's own width already
+            constrains the line, and a hard cap previously orphaned "to
+            everyone." onto its own line. 244 is the real article count
+            (`ARTICLE_META.length` in `src/data/articles.ts`, also the
+            "Astro renders all 244 cards" note in `articles-browser.ts`) —
+            the rack section's "240+ articles" stays a rounded marketing
+            figure per D10, but this line states the real number. */}
+        <p className="mt-[18px] text-[.75rem] text-muted-foreground">
+          No account needed to start. 244 articles open to everyone.
+        </p>
+
         <PartnerStrip />
       </motion.div>
 
