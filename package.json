@@ -17,7 +17,7 @@
     "format": "prettier --write \"**/*.{ts,astro,css,md,json}\"",
     "test:unit": "NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:unit:watch": "NODE_OPTIONS=--no-experimental-webstorage vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "PUBLIC_AUTH_EMULATOR=http://127.0.0.1:9099 npm run build && playwright test",
     "test:visual:capture": "node scripts/visual-diff.mjs --capture-baseline",
     "test:visual:diff": "node scripts/visual-diff.mjs --diff",
     "test:all": "npm run test:unit && npm run test:e2e && npm run test:visual:diff"
