@@ -164,7 +164,9 @@ export function ensureAuthReady(): Promise<void> {
 
 // Initials from a display name, else the local part of the email. Two
 // characters max.
-function initialsFrom(user: User | null): string {
+// Exported (Phase 5) so Nav.tsx can reproduce initAuthWatcher's rendering
+// via useAuth() instead of duplicating this logic.
+export function initialsFrom(user: User | null): string {
   const base = (user?.displayName || user?.email || '').trim();
   if (!base) return '?';
   const name = base.includes('@') ? base.split('@')[0]! : base;
@@ -176,47 +178,10 @@ function initialsFrom(user: User | null): string {
     .toUpperCase();
 }
 
-// Toggle the two children the nav markup already contains. Never write
-// innerHTML on #user-btn — that destroyed #nav-avatar and #nav-initials on
-// every state change.
-function showAvatar(photoURL: string | null | undefined, user: User | null): void {
-  const img = document.getElementById('nav-avatar') as HTMLImageElement | null;
-  const initials = document.getElementById('nav-initials');
-
-  // Fall back to initials. Unbinds onerror and drops the src first, so a photo
-  // that fails to load can't re-enter this from its own error handler.
-  const useInitials = (): void => {
-    if (img) {
-      img.onerror = null;
-      img.hidden = true;
-      img.removeAttribute('src');
-    }
-    if (initials) {
-      initials.hidden = false;
-      initials.textContent = initialsFrom(user);
-    }
-  };
-
-  if (photoURL && img) {
-    // Rebound every call: the handler closes over this call's user, and last
-    // call's handler is gone before the new src starts loading. A dead
-    // photoURL (Google photo 404 after the user removes theirs) then shows
-    // initials, not a broken icon.
-    img.onerror = useInitials;
-    img.hidden = false;
-    if (initials) initials.hidden = true;
-    img.src = photoURL; // last, so the fallback always wins the visibility flip
-    return;
-  }
-
-  useInitials();
-}
-
 // Phase 4: state substrate for a future React consumer (Phase 5's Nav.tsx).
 // Fed by its own onAuthStateChanged subscription — deliberately independent
-// of the DOM-manipulating one in initAuthWatcher() below and the second one
-// on /profile (src/islands/profile.ts). Phase 5 retires both of those in
-// favor of this store; for now all three run side by side, unconsolidated.
+// of the DOM-manipulating one that used to live in initAuthWatcher() below
+// and the second one on /profile (src/islands/profile.ts).
 export const authStore = createStore<{ user: User | null; status: 'loading' | 'in' | 'out' }>({
   user: null,
   status: 'loading',
@@ -228,7 +193,20 @@ function initAuthStore(): void {
   });
 }
 
-// Reflect auth state in the header button.
+// Phase 5: this used to also run a second onAuthStateChanged subscription
+// that wrote #user-btn's DOM directly (data-modal-open, aria-label, onclick,
+// #nav-avatar/#nav-initials) plus an 'avatar-updated' listener for the same
+// button. Nav.tsx now renders that button itself off useAuth() (which reads
+// authStore below), so a plain `.onclick =` assignment on that React-owned
+// node would just get clobbered — both retired. What's left here is only the
+// auth bootstrapping every consumer of authStore still needs.
+//
+// The 'avatar-updated' event (dispatched by the still-vanilla profile.ts
+// after a photo change) has no listener anymore. That's a known, temporary
+// gap: authStore only updates on a real onAuthStateChanged firing (sign-in/
+// out/token refresh), not on an in-place updateProfile() call, so the nav
+// won't reflect a same-session avatar/name change until Phase 10c converts
+// Profile.tsx to push the new user into authStore directly.
 export function initAuthWatcher(): void {
   // Compatibility shim: ensureAuthReady() used to run unconditionally at
   // module import as an async IIFE. Now that it's an explicit call, something
@@ -240,44 +218,4 @@ export function initAuthWatcher(): void {
   // already logged inside ensureAuthReady().
   void ensureAuthReady();
   initAuthStore();
-
-  onAuthStateChanged(auth, (user) => {
-    const btn = document.getElementById('user-btn');
-    const img = document.getElementById('nav-avatar') as HTMLImageElement | null;
-    const initials = document.getElementById('nav-initials');
-    if (!btn) return;
-
-    if (user) {
-      btn.removeAttribute('data-modal-open');
-      btn.setAttribute('aria-label', 'Your profile');
-      btn.onclick = () => {
-        window.location.href = '/profile';
-      };
-      showAvatar(user.photoURL, user);
-    } else {
-      if (img) {
-        img.hidden = true;
-        // Drop the URL too, so a signed-out browser isn't left holding the
-        // last user's photo. The onerror goes with it — it closes over the
-        // user who just signed out.
-        img.onerror = null;
-        img.removeAttribute('src');
-      }
-      if (initials) {
-        initials.hidden = true;
-        initials.textContent = '';
-      }
-      btn.setAttribute('data-modal-open', 'login-modal');
-      btn.setAttribute('aria-label', 'Sign in');
-      btn.onclick = null;
-    }
-  });
-
-  // profile island dispatches this after a photo change. A null/empty
-  // photoURL means the avatar was cleared: fall back to initials instead of
-  // leaving a stale image up.
-  window.addEventListener('avatar-updated', (e) => {
-    const detail = (e as CustomEvent<{ photoURL?: string | null }>).detail;
-    showAvatar(detail?.photoURL, auth.currentUser);
-  });
 }
