@@ -107,7 +107,7 @@
   --nav-btn-w: 120px;       /* tweak width to taste */
   --control-scale: 1.15;    /* tweak this number to taste */
 
-  --font-head:"Sora",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --font-head: var(--display-face);
   --font-body:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
 
   --container-max:1200px;

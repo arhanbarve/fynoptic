@@ -22,7 +22,10 @@
    ========================================================================== */
 
 :root {
-  --display-face: 'Spectral', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --display-face:  'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --editorial-face:'Spectral', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --wordmark-face: var(--editorial-face);
+  --mono-face:     ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   /* styles.css reads --header-h in two places but never defines it, so both fell
      back to guesses (64px and 16px offsets) that no longer match the bar. */
@@ -100,7 +103,7 @@
    display size sitting in a 56px bar next to 15px nav links. A wordmark is a
    label, not a headline. */
 .logo-text {
-  font-family: var(--display-face) !important;
+  font-family: var(--wordmark-face) !important;
   font-weight: 600 !important;
   font-size: 1.2rem !important;
   letter-spacing: -.012em !important;
@@ -158,8 +161,18 @@ html body :is(a, button).glow-cta-btn {
 .btn-ghost:hover { border-color: var(--db-optic) !important; color: var(--db-optic) !important; }
 
 /* ---- 4. type ------------------------------------------------------------- */
-h1, h2, h3, .slab-title, .cta-title, .big-statement, .art-title, .reader-title {
+h1, h2, h3, .slab-title, .cta-title, .big-statement, .art-title {
   font-family: var(--display-face) !important;
+  font-weight: 600 !important;
+  letter-spacing: -.018em !important;
+}
+/* Long-form reading content — the article title and the body's own subheads —
+   keeps the editorial serif. Higher specificity than the bare `h2, h3` above
+   (a class + a descendant selector beats a bare tag), so it wins regardless of
+   source order even though both carry !important. */
+.reader-title,
+.reader-body h2, .reader-body h3 {
+  font-family: var(--editorial-face) !important;
   font-weight: 600 !important;
   letter-spacing: -.018em !important;
 }
