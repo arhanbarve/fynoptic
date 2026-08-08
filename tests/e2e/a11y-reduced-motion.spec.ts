@@ -18,8 +18,17 @@ import { test, expect } from '@playwright/test';
 // current state as a regression guard, since it is the exact thing a
 // future change to this CSS/JS could silently break.
 
+// `.why-card` / `.slab-item` were the old `.why-slab` section's item class
+// names — that section was deleted in Phase 7 (rack-focus rewrite), so those
+// two class names no longer exist anywhere in the DOM. Dropped here in favor
+// of the classes/attributes Phase 7's replacement (RackFocus) actually
+// emits: `[role="tab"]` + `#rack-tabpanel` cover its reduced-motion tablist
+// fallback (also matches the hero Ticket's tabs, which is a bonus, not a
+// regression), and `[data-rack-name]` / `[data-rack-panel]` cover the
+// pinned-track markup in case a future change ever renders it under reduced
+// motion.
 const REVEAL_SELECTOR =
-  '.fade-up, .reveal, .reveal-up, .reveal-card, .reveal-section, .reveal-prism, .reveal-cta, .reveal-in, .why-card, .slab-item, .founder-card, .partner-cell';
+  '.fade-up, .reveal, .reveal-up, .reveal-card, .reveal-section, .reveal-prism, .reveal-cta, .reveal-in, .founder-card, .partner-cell, [role="tab"], #rack-tabpanel, [data-rack-name], [data-rack-panel]';
 
 const PAGES = ['/', '/about', '/articles', '/courses', '/courseone', '/flashcard', '/practice', '/bot'];
 

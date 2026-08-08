@@ -102,12 +102,14 @@ test.describe('homepage hero', () => {
 
     // Same widened polling cadence as before (see the flakiness note this
     // test used to carry): a fixed cadence timed to the 2200ms rotation
-    // boundary was flaky under Playwright's parallel workers. 14s (one
-    // full 5-word, 2200ms cycle is 11s) gives ~3s of margin against the
-    // whole-machine CPU contention the full suite's ~9 concurrent browser
-    // workers introduce — observed to occasionally starve this test's own
-    // page enough to slip a full cycle at a 12s deadline.
-    const deadline = Date.now() + 14_000;
+    // boundary was flaky under Playwright's parallel workers. One full
+    // 5-word, 2200ms cycle is 11s; the margin above that was widened again
+    // (14s -> 17s) after Phase 7 wired RackFocus onto this same page — it's
+    // a heavier island (framer-motion + a rAF-driven scroll listener), and
+    // this test's own page paying for its hydration/paint work under the
+    // full suite's ~9 concurrent workers made it slip a cycle at 14s
+    // occasionally.
+    const deadline = Date.now() + 17_000;
     while (Date.now() < deadline && seen.size < words.length) {
       const visibleTexts = await visibleWordSpans.allTextContents();
 
@@ -142,8 +144,10 @@ test.describe('homepage hero', () => {
 
     // Same widened 400ms polling cadence as the rotation test above, for
     // the same reason: a fixed cadence timed to the 2200ms boundary was
-    // flaky under Playwright's parallel workers.
-    const deadline = Date.now() + 12_000;
+    // flaky under Playwright's parallel workers. Widened 12s -> 15s
+    // alongside the rotation test's margin, for the same Phase 7 reason
+    // (RackFocus now hydrates on this same page).
+    const deadline = Date.now() + 15_000;
     while (Date.now() < deadline && seen.size < words.length) {
       const sample = await page.evaluate(() => {
         const heading = document.querySelector('#hero-heading');
@@ -202,7 +206,11 @@ test.describe('hero checkout ticket', () => {
     page,
   }) => {
     await page.goto('/');
-    const tabs = page.locator('[role="tab"]');
+    // Scoped by id prefix, not a bare `[role="tab"]`: Phase 7's RackFocus
+    // section (below the hero on this same page) also renders a `role="tab"`
+    // set in its reduced-motion/narrow fallback mode, which would otherwise
+    // make this locator ambiguous.
+    const tabs = page.locator('[id^="ticket-tab-"]');
     await expect(tabs).toHaveCount(7);
 
     const activeIndex = async () => {
@@ -249,7 +257,11 @@ test.describe('hero checkout ticket', () => {
 
   test('each row shows its own distinct note in the panel', async ({ page }) => {
     await page.goto('/');
-    const tabs = page.locator('[role="tab"]');
+    // Scoped by id prefix, not a bare `[role="tab"]`: Phase 7's RackFocus
+    // section (below the hero on this same page) also renders a `role="tab"`
+    // set in its reduced-motion/narrow fallback mode, which would otherwise
+    // make this locator ambiguous.
+    const tabs = page.locator('[id^="ticket-tab-"]');
     const panel = page.locator('#ticket-panel');
     const count = await tabs.count();
     const notes = new Set<string>();
