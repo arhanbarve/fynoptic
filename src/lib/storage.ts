@@ -11,6 +11,7 @@ const THEME_KEY = 'fynoptic-theme';
 const A11Y_HC_KEY = 'ff_a11y_hc';
 const A11Y_DYS_KEY = 'ff_a11y_dys';
 const ARTICLES_READ_KEY = 'ff_articles_read';
+const USER_NAME_KEY = 'ff_user_name';
 
 export type Theme = 'dark' | 'light';
 
@@ -120,6 +121,26 @@ export function getA11yDyslexia(): boolean {
 export function setA11yDyslexia(enabled: boolean): void {
   try {
     localStorage.setItem(A11Y_DYS_KEY, enabled ? '1' : '0');
+  } catch {
+    // ignore
+  }
+}
+
+// ff_user_name is a legacy key too: a raw string (not JSON), same on-disk
+// shape islands/profile.ts used. This is the certificate's learner-name
+// source (Appendix B) — src/components/profile/ProfileSettings.tsx is the
+// sole writer.
+export function getUserName(): string | null {
+  try {
+    return localStorage.getItem(USER_NAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setUserName(name: string): void {
+  try {
+    localStorage.setItem(USER_NAME_KEY, name);
   } catch {
     // ignore
   }
