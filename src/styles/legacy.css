@@ -1878,8 +1878,16 @@ box-shadow: var(--shadow-lg);
 }
 /* ---------- Article Reader: polished typography & chrome ---------- */
 
-/* Dim/blur the page behind the modal */
-.modal{
+/* Dim/blur the page behind the modal.
+   Scoped to #reader-modal (fix for a pre-existing bug: this used to be a bare
+   `.modal` rule, which — being later in the cascade than the real `.modal`
+   definition above at line 502 — silently dropped z-index from 2000 to 50
+   and swapped the background for every modal on the site, not just the
+   article reader. That made any modal whose dialog reached the sticky
+   header's screen region render behind it and become unclickable there. See
+   also the `#reader-modal.modal .dialog` scoping further down, which fixed
+   the .dialog half of this same rule but not this base .modal half.) */
+#reader-modal.modal{
 position: fixed; inset: 0;
 display: grid; place-items: center;
 background: color-mix(in srgb, #0B1220 65%, transparent);
