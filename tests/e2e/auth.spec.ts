@@ -24,17 +24,19 @@ async function signUp(page: Page, email: string): Promise<void> {
 
 // Both #user-btn's onclick ('/profile') and #logout-btn's handler
 // (logout() then location.replace('/')) navigate via script, not a plain
-// <a href>. Waiting on the resulting DOM state (rather than
-// page.waitForURL) survives the hard navigation without racing Playwright's
-// own frame-lifecycle tracking, which under heavy parallel load can throw
-// "net::ERR_ABORTED; maybe frame was detached?" on a waitForURL that starts
-// right as the old frame tears down.
+// <a href>. #user-btn's markup is shared across every page (Header.astro),
+// so checking its DOM state ALONE is not enough proof the navigation
+// actually landed: auth.ts's onAuthStateChanged watcher updates
+// data-modal-open on whichever page is current the instant the auth SDK
+// fires, which can be the OLD page, a beat before location.replace() has
+// actually swapped the frame. Waiting on page.url() (a synchronous
+// Playwright-tracked getter that can't throw mid-navigation, unlike
+// page.evaluate) in addition to the DOM state avoids clicking into a
+// frame that's mid-teardown.
 async function goToProfile(page: Page): Promise<void> {
   await page.locator('#user-btn').click();
-  // expect(...).toPass rather than a plain assertion: a locator query mid
-  // hard-navigation can reject with "execution context destroyed" under
-  // heavy parallel load, and toPass retries past that instead of failing.
   await expect(async () => {
+    expect(page.url()).toContain('/profile');
     await expect(page.locator('#logout-btn')).toBeVisible();
   }).toPass({ timeout: 10_000 });
 }
@@ -42,6 +44,7 @@ async function goToProfile(page: Page): Promise<void> {
 async function signOut(page: Page): Promise<void> {
   await page.locator('#logout-btn').click();
   await expect(async () => {
+    expect(page.url()).not.toContain('/profile');
     await expect(page.locator('#user-btn')).toHaveAttribute('data-modal-open', 'login-modal');
   }).toPass({ timeout: 10_000 });
 }

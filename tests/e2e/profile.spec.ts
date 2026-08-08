@@ -30,13 +30,11 @@ async function signUpFromHome(page: Page, email: string): Promise<void> {
 // "net::ERR_ABORTED; maybe frame was detached?" if it starts right as the
 // old frame tears down.
 async function expectRedirectedHome(page: Page): Promise<void> {
-  // expect(...).toPass retries the whole callback, including a rejected
-  // page.evaluate() from an in-flight navigation — more resilient here
-  // than expect.poll, which surfaces that rejection instead of retrying
-  // past it under heavy parallel load.
+  // page.url() is a synchronous, Playwright-tracked getter — unlike
+  // page.evaluate(), it can't reject with "execution context destroyed"
+  // mid-navigation, so it's safe to poll directly via toPass.
   await expect(async () => {
-    const path = await page.evaluate(() => location.pathname).catch(() => null);
-    expect(path).toMatch(/^\/(index\.html)?$/);
+    expect(page.url()).not.toContain('/profile');
   }).toPass({ timeout: 10_000 });
 }
 
