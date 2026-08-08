@@ -18,14 +18,14 @@ export default defineConfig({
           name: 'unit',
           environment: 'node',
           include: ['tests/unit/**/*.test.ts'],
-          exclude: ['tests/unit/storage.test.ts', 'tests/unit/course-state.test.ts'],
+          exclude: ['tests/unit/storage.test.ts', 'tests/unit/course-state.test.ts', 'tests/unit/progress-store.test.ts'],
         },
       },
       {
         test: {
           name: 'unit-dom',
           environment: 'jsdom',
-          include: ['tests/unit/storage.test.ts', 'tests/unit/course-state.test.ts'],
+          include: ['tests/unit/storage.test.ts', 'tests/unit/course-state.test.ts', 'tests/unit/progress-store.test.ts'],
         },
       },
     ],
