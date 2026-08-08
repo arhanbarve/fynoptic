@@ -12,10 +12,9 @@ export interface ToastItem {
   variant: ToastVariant;
 }
 
-// Phase 4: a store layered on top of the existing DOM-based toasts below, so
-// a future React <Toaster> (Phase 5) can render from it. showToast() below
-// is unchanged apart from also pushing/removing entries here; the DOM toast
-// it builds today remains the thing that's actually visible.
+// Phase 5: <Toaster> (src/components/shell/Toaster.tsx) is the sole
+// renderer, reading this store via useSyncExternalStore. showToast() below
+// only pushes/removes entries here — it no longer builds any DOM itself.
 export const toastStore = createStore<ToastItem[]>([]);
 
 let nextToastId = 0;
@@ -25,36 +24,10 @@ function makeToastId(): string {
   return `toast-${nextToastId}`;
 }
 
-function ensureContainer(): HTMLElement {
-  let container = document.querySelector<HTMLElement>('.toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.className = 'toast-container';
-    container.setAttribute('aria-live', 'polite');
-    container.setAttribute('aria-atomic', 'true');
-    document.body.appendChild(container);
-  }
-  return container;
-}
-
 export function showToast(message: string, variant: ToastVariant = 'info'): void {
-  const container = ensureContainer();
-  const el = document.createElement('div');
-  el.className = 'toast';
-  el.setAttribute('role', 'status');
-  if (variant === 'success') el.style.borderLeftColor = 'var(--success-500)';
-  if (variant === 'error') el.style.borderLeftColor = 'var(--danger-500)';
-  el.textContent = message;
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 3500);
-
   const id = makeToastId();
   toastStore.set([...toastStore.get(), { id, message, variant }]);
   setTimeout(() => {
     toastStore.set(toastStore.get().filter((toast) => toast.id !== id));
   }, 3500);
-}
-
-export function initToasts(): void {
-  ensureContainer();
 }
