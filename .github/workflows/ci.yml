@@ -14,7 +14,7 @@ jobs:
       # of the real project. PUBLIC_-prefixed Astro/Vite env vars are inlined
       # at build time, so this has to be set before `npm run build`, not just
       # before the test run.
-      PUBLIC_AUTH_EMULATOR: 127.0.0.1:9099
+      PUBLIC_AUTH_EMULATOR: http://127.0.0.1:9099
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
