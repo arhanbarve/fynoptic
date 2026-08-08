@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
+  getArticlesRead,
   getCourseProgress,
   getFixitHistory,
   getReports,
   getTheme,
+  setArticlesRead,
   setCourseProgress,
   setFixitHistory,
   setReports,
@@ -14,6 +16,7 @@ const COURSE_PROGRESS_KEY = 'ff_course_progress';
 const FIXIT_HISTORY_KEY = 'ff_fixit_history';
 const REPORTS_KEY = 'ff_reports';
 const THEME_KEY = 'fynoptic-theme';
+const ARTICLES_READ_KEY = 'ff_articles_read';
 
 beforeEach(() => {
   localStorage.clear();
@@ -32,6 +35,9 @@ describe('exact key names', () => {
 
     setTheme('light');
     expect(localStorage.getItem(THEME_KEY)).toBe('light');
+
+    setArticlesRead(['bnpl-real-rules']);
+    expect(localStorage.getItem(ARTICLES_READ_KEY)).toBe('["bnpl-real-rules"]');
   });
 });
 
@@ -61,6 +67,18 @@ describe('zod fallbacks on corrupt JSON', () => {
   it('round-trips valid data', () => {
     setCourseProgress(['dp-m1', 'dp-m2']);
     expect(getCourseProgress()).toEqual(['dp-m1', 'dp-m2']);
+  });
+
+  it('getArticlesRead falls back to [] on invalid JSON', () => {
+    localStorage.setItem(ARTICLES_READ_KEY, '{not json');
+    expect(getArticlesRead()).toEqual([]);
+    localStorage.setItem(ARTICLES_READ_KEY, JSON.stringify([1, 2, 3]));
+    expect(getArticlesRead()).toEqual([]); // array of numbers, not strings
+  });
+
+  it('getArticlesRead round-trips valid data', () => {
+    setArticlesRead(['bnpl-real-rules', 'bills-that-creep']);
+    expect(getArticlesRead()).toEqual(['bnpl-real-rules', 'bills-that-creep']);
   });
 });
 

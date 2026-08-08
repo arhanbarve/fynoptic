@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { ARTICLE_META } from '../../data/articles';
+import { ReadMarker } from '../../components/articles/ReadMarker';
 
 export function getStaticPaths() {
   return ARTICLE_META.map((a) => ({ params: { id: a.id }, props: a }));
@@ -16,4 +17,10 @@ if (typeof body !== 'string') throw new Error(`missing article body for id: ${id
     <h1 class="reader-title">{title}</h1>
     <div class="reader-body" set:html={body} />
   </article>
+  <!--
+    The one client island on this otherwise script-free page: records this
+    id into ff_articles_read on mount. Renders nothing, never touches the
+    server-rendered reading content above.
+  -->
+  <ReadMarker id={id} client:load />
 </Base>

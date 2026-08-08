@@ -55,6 +55,7 @@ const cards = ARTICLE_META.map((a) => {
             <option value="short">Shortest read</option>
             <option value="long">Longest read</option>
           </select>
+          <button type="button" id="unread-toggle" class="chip" aria-pressed="false">Unread only</button>
           <span class="result-count" id="result-count" aria-live="polite"></span>
         </div>
       </div>
@@ -74,6 +75,7 @@ const cards = ARTICLE_META.map((a) => {
         >
           <div class="art-media">
             <span class="art-badge">Guide</span>
+            <span class="art-read-badge"><span aria-hidden="true">✓</span> Read</span>
           </div>
           <h3 class="art-title">{a.title}</h3>
           <div class="art-meta">{a.readMins} min read</div>
@@ -131,6 +133,42 @@ const cards = ARTICLE_META.map((a) => {
     .articles-grid .article-card:focus-visible {
       outline: 2px solid var(--db-optic, currentColor);
       outline-offset: 3px;
+    }
+
+    /* Read affordance — toggled by ArticlesBrowser.tsx once it checks
+       ff_articles_read on mount. Hidden by default so a no-JS load (and the
+       one instant before hydration) never claims an article was read.
+       Sits opposite the "Guide" badge on the same fixed-dark media plate, so
+       it takes the same fixed-ink treatment as .art-badge (see
+       redesign.css's contrast fix for that plate) rather than theme tokens
+       that would go near-invisible in light mode. */
+    .art-read-badge {
+      display: none;
+      position: absolute;
+      top: .6rem;
+      right: .6rem;
+      z-index: 1;
+      align-items: center;
+      gap: .3rem;
+      background: rgba(34, 209, 178, .18);
+      color: #EAFBF6;
+      border: 1px solid rgba(34, 209, 178, .45);
+      padding: .25rem .55rem;
+      font-size: .75rem;
+      border-radius: 999px;
+      backdrop-filter: blur(6px);
+    }
+    .article-card.is-read .art-read-badge {
+      display: inline-flex;
+    }
+
+    /* Unread-only filter toggle — same active treatment as the .filters
+       .chip.is-active pattern used elsewhere on the site, scoped by id
+       since this chip sits outside a .filters container. */
+    #unread-toggle.is-active {
+      color: var(--text-100);
+      border-color: rgba(91, 140, 255, .6);
+      box-shadow: 0 0 0 2px rgba(91, 140, 255, .35) inset, 0 8px 28px rgba(63, 106, 255, .18);
     }
   </style>
 

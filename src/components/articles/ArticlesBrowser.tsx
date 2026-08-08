@@ -24,7 +24,17 @@
 // decide what's hidden, and again just to count results for track(). Here
 // `matching` is a single useMemo; both the DOM sync effect and the
 // search-tracking effect below read its `.length` from that one array.
+//
+// 10b-2: read-marking (O4). ff_articles_read is checked once on mount (the
+// same pass that builds `entries`) and each card's article id is derived
+// from its own `href` — no new data-* attribute was worth adding just for
+// this. The DOM sync effect below toggles an `.is-read` class per card
+// (same category of change as the `hidden` toggle it already does) and
+// articles.astro's CSS shows the badge from that class. #unread-toggle is a
+// button articles.astro now renders next to the sort select; this file only
+// reads/toggles it, the same way it already treats every other control.
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { getArticlesRead } from '@/lib/storage';
 import { track } from '@/lib/track';
 
 const PAGE_SIZE = 12;
@@ -35,10 +45,14 @@ type SortKey = 'featured' | 'az' | 'za' | 'short' | 'long';
 // The corresponding DOM node lives in cardElsRef, indexed by `id`.
 interface Entry {
   id: number;
+  articleId: string;
   haystack: string;
   title: string;
   read: number;
   order: number;
+  // Whether this article id was already in ff_articles_read as of mount.
+  // Named distinctly from `read` (reading-time minutes, unrelated field).
+  wasRead: boolean;
 }
 
 const SORTS: Record<SortKey, (a: Entry, b: Entry) => number> = {
@@ -63,6 +77,7 @@ export function ArticlesBrowser(): null {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('featured');
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [unreadOnly, setUnreadOnly] = useState(false);
 
   // Wire up once: read the existing DOM (grid, cards, and every control
   // Astro already renders) and attach the handlers that used to live in
@@ -75,19 +90,30 @@ export function ArticlesBrowser(): null {
     const sortSelect = document.querySelector<HTMLSelectElement>('#sort-select');
     const loadMoreBtn = document.querySelector<HTMLButtonElement>('#load-more');
     const clearBtn = document.querySelector<HTMLButtonElement>('#clear-filters');
+    const unreadToggleBtn = document.querySelector<HTMLButtonElement>('#unread-toggle');
 
     gridElRef.current = grid;
 
+    // The read affordance and unread filter both key off the article id, not
+    // the card's DOM index — that id isn't in a data-* attribute, but every
+    // card is `<a href="/articles/{id}">`, so it's read off the href instead
+    // of adding a new attribute to cards that were already server-rendered.
+    const readIds = new Set(getArticlesRead());
     const els = [...grid.querySelectorAll<HTMLElement>('.article-card')];
     cardElsRef.current = els;
     setEntries(
-      els.map((el, i) => ({
-        id: i,
-        haystack: `${el.dataset.title ?? ''} ${el.dataset.blurb ?? ''}`.toLowerCase(),
-        title: el.dataset.title ?? '',
-        read: Number(el.dataset.read ?? '0'),
-        order: i,
-      })),
+      els.map((el, i) => {
+        const articleId = (el.getAttribute('href') ?? '').split('/').filter(Boolean).pop() ?? '';
+        return {
+          id: i,
+          articleId,
+          haystack: `${el.dataset.title ?? ''} ${el.dataset.blurb ?? ''}`.toLowerCase(),
+          title: el.dataset.title ?? '',
+          read: Number(el.dataset.read ?? '0'),
+          order: i,
+          wasRead: readIds.has(articleId),
+        };
+      }),
     );
 
     let debounceTimer: ReturnType<typeof setTimeout>;
@@ -119,11 +145,27 @@ export function ArticlesBrowser(): null {
       setQuery('');
       setSort('featured');
       setVisible(PAGE_SIZE);
+      setUnreadOnly(false);
       if (searchInput) searchInput.value = '';
       if (sortSelect) sortSelect.value = 'featured';
+      if (unreadToggleBtn) {
+        unreadToggleBtn.classList.remove('is-active');
+        unreadToggleBtn.setAttribute('aria-pressed', 'false');
+      }
       searchInput?.focus();
     };
     clearBtn?.addEventListener('click', onClear);
+
+    const onUnreadToggle = (): void => {
+      setUnreadOnly((prev) => {
+        const next = !prev;
+        unreadToggleBtn?.classList.toggle('is-active', next);
+        unreadToggleBtn?.setAttribute('aria-pressed', String(next));
+        return next;
+      });
+      setVisible(PAGE_SIZE);
+    };
+    unreadToggleBtn?.addEventListener('click', onUnreadToggle);
 
     // "/" jumps to search, matching the hint rendered next to the field.
     // Arrow keys move focus between currently visible cards. Both read live
@@ -161,6 +203,7 @@ export function ArticlesBrowser(): null {
       sortSelect?.removeEventListener('change', onSortChange);
       loadMoreBtn?.removeEventListener('click', onLoadMore);
       clearBtn?.removeEventListener('click', onClear);
+      unreadToggleBtn?.removeEventListener('click', onUnreadToggle);
       window.removeEventListener('keydown', onKeydown);
     };
   }, []);
@@ -169,9 +212,10 @@ export function ArticlesBrowser(): null {
   // search-tracking effect below.
   const matching = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q ? entries.filter((e) => e.haystack.includes(q)) : entries.slice();
+    let list = q ? entries.filter((e) => e.haystack.includes(q)) : entries.slice();
+    if (unreadOnly) list = list.filter((e) => !e.wasRead);
     return list.sort(SORTS[sort]);
-  }, [entries, query, sort]);
+  }, [entries, query, sort, unreadOnly]);
 
   // Reorder the existing card nodes into sorted order, toggle `hidden` for
   // the current page/filter, and update the count / empty-state /
@@ -191,7 +235,9 @@ export function ArticlesBrowser(): null {
     const shown = new Set(matching.slice(0, visible).map((e) => e.id));
     for (const e of entries) {
       const el = els[e.id];
-      if (el) el.hidden = !shown.has(e.id);
+      if (!el) continue;
+      el.hidden = !shown.has(e.id);
+      el.classList.toggle('is-read', e.wasRead);
     }
 
     const resultCount = document.getElementById('result-count');

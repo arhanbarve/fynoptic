@@ -10,6 +10,7 @@ const REPORTS_KEY = 'ff_reports';
 const THEME_KEY = 'fynoptic-theme';
 const A11Y_HC_KEY = 'ff_a11y_hc';
 const A11Y_DYS_KEY = 'ff_a11y_dys';
+const ARTICLES_READ_KEY = 'ff_articles_read';
 
 export type Theme = 'dark' | 'light';
 
@@ -52,6 +53,16 @@ export function getFixitHistory(): string[] {
 
 export function setFixitHistory(entries: string[]): void {
   writeJson(FIXIT_HISTORY_KEY, entries);
+}
+
+// Article ids the reader has visited. Local-only, same shape/convention as
+// ff_course_progress: string[], zod-validated, empty array on anything else.
+export function getArticlesRead(): string[] {
+  return readStringArray(ARTICLES_READ_KEY);
+}
+
+export function setArticlesRead(articleIds: string[]): void {
+  writeJson(ARTICLES_READ_KEY, articleIds);
 }
 
 export function getReports(): unknown[] {
