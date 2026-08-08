@@ -13,39 +13,18 @@ import Hero from '../components/hero/Hero';
   <section class="hero" role="region" aria-labelledby="hero-heading">
 
     <div class="container hero-content">
-      <!-- Hero island: headline, subhead, CTAs. client:load (not client:visible):
-           this content is always in the initial viewport, so there's no scroll
-           distance for an IntersectionObserver to save — client:load hydrates
-           it as soon as the bundle is ready instead of waiting on an observer
-           callback for content that's already on screen. -->
+      <!-- Hero island: headline, subhead, CTAs, partner strip, and the
+           checkout ticket — a two-column grid (left content / right
+           ticket) per spec §6.2, all built inside Hero.tsx now. The partner
+           marquee used to be a sibling block here, spanning this whole
+           container below the headline; it now lives inside Hero.tsx's
+           left column (PartnerStrip.tsx) so it no longer spans full width.
+           client:load (not client:visible): this content is always in the
+           initial viewport, so there's no scroll distance for an
+           IntersectionObserver to save — client:load hydrates it as soon as
+           the bundle is ready instead of waiting on an observer callback
+           for content that's already on screen. -->
       <Hero client:load />
-
-      <!-- Partners marquee -->
-      <div class="partners reveal-up delay-3">
-        <div class="partners-head">
-          <span class="partners-kicker">In partnership with</span>
-        </div>
-
-        <div class="logo-ticker" role="region" aria-label="Partner organizations">
-          <div class="logo-track">
-            <!-- Replace these placeholders with your real logo files anytime -->
-            <div class="logo-card"><img src="/assets/img/invesco.webp" alt="Invesco" /></div>
-            <div class="logo-card"><img src="/assets/img/national-personal-finance-challenge-logo.webp" alt="National Personal Finance Challenge" /></div>
-            <div class="logo-card"><img src="/assets/img/national-economic-challenge-logo.webp" alt="National Economic Challenge" /></div>
-            <div class="logo-card"><img src="/assets/img/emory.webp" alt="Emory University" /></div>
-            <div class="logo-card"><img src="/assets/img/gcee-logo.webp" alt="Partner organisation logo" /></div>
-
-            <!-- Duplicate once for seamless loop -->
-            <div class="logo-card"><img src="/assets/img/invesco.webp" alt="Invesco" /></div>
-            <div class="logo-card"><img src="/assets/img/national-personal-finance-challenge-logo.webp" alt="National Personal Finance Challenge" /></div>
-            <div class="logo-card"><img src="/assets/img/national-economic-challenge-logo.webp" alt="National Economic Challenge" /></div>
-            <div class="logo-card"><img src="/assets/img/emory.webp" alt="Emory University" /></div>
-            <div class="logo-card"><img src="/assets/img/gcee-logo.webp" alt="Partner organisation logo" /></div>
-          </div>
-          <div class="ticker-glow" aria-hidden="true"></div>
-        </div>
-      </div>
-
     </div>
   </section>
   <!-- Section divider -->
