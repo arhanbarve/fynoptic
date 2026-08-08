@@ -331,6 +331,14 @@ h3 {
   border: 2px solid var(--primary-500);
   color: var(--primary-500);
 }
+.btn-danger {
+  background: var(--danger-500);
+  border: none;
+  color: #fff;
+}
+.btn-danger:hover {
+  filter: brightness(1.08);
+}
 .chip {
   background: var(--brand-900);
   padding: 0.4em 0.75em;
@@ -5783,6 +5791,10 @@ body[data-cat="Economics"] .topics-card {
   font-size: .8rem;
   opacity: .8;
   margin-top: 4px;
+}
+.end-session-actions {
+  margin-top: 1rem;
+  text-align: center;
 }
 /* ===== Cross-out (eliminate) styling for answers ===== */
 .mc-option.is-eliminated {
