@@ -1,0 +1,186 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base
+  title="Privacy • Fynoptic"
+  description="What Fynoptic collects, what stays on your device, and the one external service that ever sees what you type."
+  canonical="/privacy"
+  ogTitle="Privacy • Fynoptic"
+  ogDescription="What Fynoptic collects, what stays on your device, and the one external service that ever sees what you type."
+>
+  <article class="container privacy">
+    <h1>Privacy</h1>
+    <p class="lead privacy-updated">Last updated August 8, 2026.</p>
+
+    <p class="lead">
+      This page describes exactly what Fynoptic collects, where it's stored, and who else ever
+      sees it. It's written to match what the site's code actually does, not as a generic
+      template — if something changes, this page will change with it.
+    </p>
+
+    <h2>If you create an account</h2>
+    <p>
+      Signing in is handled by Firebase Authentication, a Google Cloud service. When you sign up
+      or sign in with email and password, Firebase stores your <strong>email address</strong>. If
+      you choose "Continue with Google" instead, Google handles that step directly and shares
+      your Google account's email with Firebase.
+    </p>
+    <p>
+      Two other pieces of profile information are optional and only exist if you set them
+      yourself in your profile settings: a <strong>display name</strong> and an
+      <strong>avatar photo</strong>.
+    </p>
+    <p>
+      Fynoptic never sees or stores your password — Firebase handles that directly and we have no
+      access to it.
+    </p>
+    <p>
+      Staying signed in: the site tries to keep you signed in across visits (using your browser's
+      IndexedDB or local storage, whichever it can use). If your browser blocks that kind of
+      persistent storage, it falls back to keeping you signed in only for that one browser
+      session, and you'll need to sign in again the next time you visit.
+    </p>
+
+    <h2>If you upload an avatar photo</h2>
+    <p>
+      Avatar photos are uploaded to Firebase Storage, also a Google Cloud service, at a path
+      shaped like <code>{`avatars/{uid}/{timestamp}-{filename}`}</code>. Two limits are enforced
+      on upload:
+    </p>
+    <ul>
+      <li>Only image files are accepted.</li>
+      <li>Files larger than 3 MB are rejected.</li>
+    </ul>
+    <p>
+      You can also skip the upload and paste a photo URL instead — if you do both, the uploaded
+      file takes priority.
+    </p>
+
+    <h2>What stays on your device and is never sent anywhere</h2>
+    <p>
+      Your course progress, quiz history, flashcard scores, and site preferences are stored
+      locally in your browser — in <code>localStorage</code> and, for one of them, a cookie. None
+      of it is transmitted to Fynoptic, to any server, or to anyone else. It exists only on the
+      device and in the browser you're using, and clearing your browser's site data for Fynoptic
+      deletes all of it.
+    </p>
+    <p>Specifically, this is everything stored that way:</p>
+    <ul>
+      <li>
+        <strong>Course progress</strong> (<code>ff_course_progress</code>) — which course modules
+        you've completed.
+      </li>
+      <li>
+        <strong>Dark Patterns course state</strong> (<code>ff_dp_state</code>, and a duplicate
+        copy in a cookie named <code>ff_dp_state_v2</code> that expires after 180 days) — your
+        progress through that course's videos, articles, and exercises.
+      </li>
+      <li>
+        <strong>Your display name</strong> (<code>ff_user_name</code>) — a copy of the name you
+        entered in profile settings, used to print your name on a course completion certificate.
+      </li>
+      <li>
+        <strong>Risk audit submissions</strong> (<code>ff_risk_audits</code>) — your saved answers
+        from the course's risk-audit exercise.
+      </li>
+      <li>
+        <strong>Flashcard progress</strong> (<code>fynoptic.flashcards.v1</code>) — which
+        flashcard terms you've answered, how many attempts, and when.
+      </li>
+      <li>
+        <strong>Theme preference</strong> (<code>fynoptic-theme</code>) — whether you're using
+        light or dark mode.
+      </li>
+      <li>
+        <strong>Accessibility preferences</strong> (<code>ff_a11y_hc</code> and
+        <code>ff_a11y_dys</code>) — whether you've turned on high-contrast mode or the
+        dyslexia-friendly font.
+      </li>
+    </ul>
+
+    <h2>No analytics, no ads, no tracking scripts</h2>
+    <p>
+      Fynoptic does not run any analytics, advertising, or third-party tracking script. The
+      site's Firebase configuration happens to include an analytics identifier, but Firebase
+      Analytics is never turned on anywhere in the code — that identifier just sits there unused.
+      A handful of events (like finishing a course module) are logged, but only to your own
+      browser's developer console, for our own debugging during development. Nothing about your
+      visit or activity is sent to us or to any third party for tracking purposes.
+    </p>
+
+    <h2>The one exception: the Fix-it Bot chat assistant</h2>
+    <p>
+      If you use the Fix-it Bot chat widget, whatever you type into it is sent to a chat backend
+      we operate, hosted on a third-party service called Render, so it can generate a reply. Only
+      the text of your message is sent — not your name, email, or any other account information.
+      That backend is a free-tier instance that can take up to about a minute to wake up if it's
+      been idle, which is why the bot sometimes shows a "still waking up" message before
+      responding.
+    </p>
+    <p>
+      This is the only place on the site where something you type is sent off your device to a
+      service other than the sign-in and storage systems described above.
+    </p>
+
+    <h2>Questions</h2>
+    <p>
+      If you have questions about any of this, or want us to delete account data we hold about
+      you, email <a href="mailto:info@fynoptic.org">info@fynoptic.org</a>.
+    </p>
+  </article>
+</Base>
+
+<style>
+  .privacy {
+    max-width: 68ch;
+    padding-top: clamp(24px, 4vw, 48px);
+    padding-bottom: clamp(32px, 6vw, 64px);
+  }
+
+  .privacy h1 {
+    margin-bottom: 0.25rem;
+  }
+
+  .privacy-updated {
+    font-size: 0.9rem;
+    color: var(--muted-fg);
+    margin-bottom: 1.5rem;
+  }
+
+  .privacy h2 {
+    font-size: 1.3rem;
+    margin-top: 2.2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .privacy p {
+    color: var(--text-200);
+    line-height: 1.7;
+    margin: 0 0 1rem;
+  }
+
+  .privacy ul {
+    margin: 0 0 1.2rem 1.25rem;
+    color: var(--text-200);
+    line-height: 1.7;
+  }
+
+  .privacy li {
+    margin: 0.35rem 0;
+  }
+
+  .privacy code {
+    font-family: var(--mono-face, ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace);
+    font-size: 0.9em;
+    background: rgba(var(--tint-rgb), 0.08);
+    border: 1px solid rgba(var(--tint-rgb), 0.12);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+  }
+
+  .privacy a {
+    color: var(--link-fg);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>

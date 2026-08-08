@@ -1,0 +1,78 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base
+  title="Accessibility • Fynoptic"
+  description="How Fynoptic works with keyboards and screen readers, what still needs work, and how to report an accessibility barrier."
+  canonical="/accessibility"
+  ogTitle="Accessibility • Fynoptic"
+  ogDescription="How Fynoptic works with keyboards and screen readers, what still needs work, and how to report an accessibility barrier."
+>
+  <section class="a11y-page" role="region" aria-labelledby="a11y-title">
+    <div class="container a11y-content">
+      <h1 id="a11y-title" class="slab-title">Accessibility</h1>
+
+      <p>
+        Fynoptic teaches people to spot junk fees, dark patterns, and subscription traps.
+        That mission falls apart if the site itself is hard to use, so here's a plain account
+        of where things actually stand — what works today, what's still in progress, and how
+        to tell us when something doesn't work for you.
+      </p>
+
+      <h2>Keyboard use</h2>
+      <p>You can operate the whole site without a mouse.</p>
+      <ul>
+        <li>
+          A "Skip to content" link is the first thing focused when you tab in. Activating it
+          jumps straight to the main content, past the header navigation.
+        </li>
+        <li>
+          Every dialog — sign in, sign up, password reset, and the other in-page modals across
+          the site — traps keyboard focus while it's open, closes on Escape, and returns focus
+          to whatever you were doing when it opened.
+        </li>
+        <li>
+          The mobile menu closes with Escape, with its own close button, or by tapping a link
+          in it.
+        </li>
+        <li>
+          The fee ticket on the homepage and the feature section further down the page are both
+          fully keyboard-operable: arrow keys move between rows or panels, and each one shows
+          its own detail as you go.
+        </li>
+      </ul>
+
+      <h2>Reduced motion</h2>
+      <p>
+        If your system is set to reduce motion, Fynoptic follows it. The homepage's rotating
+        headline word freezes on the first word instead of cycling. The feature section further
+        down the homepage swaps its scroll-driven, blurring effect for a plain, static set of
+        tabs — nothing is left blurred or invisible. We test this directly rather than just
+        hoping the CSS holds up.
+      </p>
+
+      <h2>High contrast and dyslexia-friendly type</h2>
+      <p>
+        This one is honest work-in-progress. The site can remember a high-contrast preference
+        and a dyslexia-friendly typeface preference, but there's no visible switch to turn
+        either one on yet — the plumbing exists, the button doesn't. If you need either of
+        these today, email us and we'll help directly while we finish building the control.
+      </p>
+
+      <h2>Color contrast</h2>
+      <p>
+        We don't have a published contrast-ratio target yet, and an internal audit has already
+        found spots that likely fall short, particularly on text near transitions and
+        animations. We haven't fixed all of it. If something is hard to read because of low
+        contrast, that's exactly the kind of report that helps us fix the right things first.
+      </p>
+
+      <h2>Report a barrier</h2>
+      <p>
+        If anything on Fynoptic doesn't work with a keyboard, a screen reader, or otherwise
+        gets in your way, tell us. Email <a href="mailto:info@fynoptic.org">info@fynoptic.org</a>
+        with what page you were on and what happened — we read every message.
+      </p>
+    </div>
+  </section>
+</Base>
