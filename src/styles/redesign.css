@@ -375,16 +375,41 @@ html body .auth-link button {
    can no longer silently un-inset a band. */
 html body .container { padding-inline: var(--gutter) !important; }
 
+/* S6 (Phase 8): RackFocus.tsx (Phase 7) is the one section on the page built
+   with bare Tailwind utilities (`px-4 py-16 sm:px-6 lg:px-8`) instead of
+   `.container`/`.hero-content`'s var(--gutter) rail, and it's the only
+   remaining plain `<section>` element on the homepage — everything else that
+   used to be one (.statement, .why-slab, .final-cta) was deleted in the same
+   phase that added this one. legacy.css's `section { padding: 5rem 0 }`
+   (line ~780) is unlayered while Tailwind's utility classes live inside a
+   cascade layer, so the legacy rule won outright regardless of specificity:
+   horizontal padding collapsed to 0 (flush to the viewport edge below
+   1152px, where `max-w-6xl`'s own `mx-auto` centering has nothing to centre
+   against) and vertical padding came out 80px, not the intended 64px. Pinned
+   onto the same rail as .container/.hero-content instead. */
+section[aria-labelledby="rack-heading"] {
+  max-width: var(--container-max) !important;
+  margin-inline: auto !important;
+  padding: clamp(2.5rem, 5vw, 4rem) var(--gutter) !important;
+}
+
 html body .header .nav {
   padding-block: 10px !important;
   gap: clamp(1rem, 3vw, 2.5rem);
 }
 
-/* .footer supplies its own 32px inline padding *and* contains .footer-container,
-   which applies the gutter again — so the footer sat one gutter deeper than the
-   page at every width below 1200px. One of the two has to own it. */
+/* .footer supplies its own 32px inline padding *and* (pre-Phase-5) contained
+   .footer-container, which applied the gutter again — so the footer sat one
+   gutter deeper than the page at every width below 1200px. One of the two has
+   to own it. Footer.astro (and .footer-container with it) was deleted in
+   Phase 5 in favour of Footer.tsx's .ft-grid, but this rule was never
+   retargeted (S6, Phase 8) — it was pointing at a class nothing renders
+   anymore, so .footer's own inline padding was zeroed with nothing supplying
+   it back, and the footer's whole column of content (wordmark, "Learn",
+   "Topics", "Fynoptic") sat flush against the viewport edge at every width.
+   The rail (max-width + centering + gutter) is pinned on .ft-grid itself,
+   in section 15 below, where the rest of its layout already lives. */
 html body .footer { padding-inline: 0 !important; }
-html body .footer .footer-container { padding-inline: var(--gutter) !important; }
 
 /* Anything that opted out of the rail with its own narrower box gets pulled
    back onto it. The measure moves to the text, where it belongs. */
@@ -644,11 +669,31 @@ html body .wizard-panel h2 { text-align: left !important; }
    exactly .footer-left/.footer-links/.footer-contact as direct children, so
    giving it a new name keeps the two systems from fighting once the old
    Footer.astro (and this rule's only consumer) is deleted. */
+/* S6 (Phase 8): this rule's horizontal padding was 0 (the shorthand's middle
+   value) with no max-width/centering to replace it, so on every build the
+   four columns ran flush to the viewport edge instead of sharing the page's
+   rail — see the note by `html body .footer` above. `max-width` + `margin-
+   inline: auto` matches how .hero-content and .container do the same job
+   above 1200px; `padding-inline: var(--gutter)` covers it below that. */
 .footer .ft-grid {
   display: grid;
   grid-template-columns: 1.3fr 1fr 1fr 1fr;
   gap: clamp(24px, 4vw, 48px);
-  padding: clamp(32px, 5vw, 56px) 0 clamp(20px, 3vw, 32px);
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding: clamp(32px, 5vw, 56px) var(--gutter) clamp(20px, 3vw, 32px);
+}
+/* S6 (Phase 8): the old .footer-container had its own 768px collapse
+   (`flex-direction: column`, legacy.css:1349) for exactly this reason — four
+   fixed tracks with no responsive rule left nothing for narrow viewports.
+   .ft-grid never got the equivalent when Footer.tsx replaced it in Phase 5:
+   below 768px the four columns (1.3fr/1fr/1fr/1fr, min-width: 0) each got
+   pressed under ~90px, and link text like "Pattern Families" or "Fix-it Bot"
+   doesn't wrap at a container that narrow so cleanly — rows visually
+   overlapped their neighbors instead of just wrapping within their own
+   column. Stacked, matching the old page's same breakpoint. */
+@media (max-width: 768px) {
+  .footer .ft-grid { grid-template-columns: 1fr; }
 }
 .footer .ft-col { min-width: 0; }
 .footer .ft-wordmark {
@@ -663,6 +708,13 @@ html body .wizard-panel h2 { text-align: left !important; }
   text-decoration: none;
   margin-bottom: 10px;
 }
+/* S6 (Phase 8): legacy.css's base `.footer-links` rule (line ~1312, built for
+   the old single-row 3-column footer) carries `min-width: 220px`, and a
+   second legacy rule (line ~2886, built to dead-centre one specific middle
+   column in that same old layout) adds `text-align: center`. Neither was
+   ever reset for the new vertical list, so every link sat centred inside a
+   220px box instead of flush under its own column heading — visible at
+   every width, not just narrow ones, since nothing here is width-gated. */
 .footer .ft-col .footer-links {
   list-style: none;
   margin: 0;
@@ -670,6 +722,23 @@ html body .wizard-panel h2 { text-align: left !important; }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+/* Same bug, same source, one column over: legacy.css's base `.footer-contact`
+   rule (line ~1333) carries `flex: 1 1 20%; text-align: right; min-width:
+   200px`, and its 768px collapse (line ~1356) swaps that to `text-align:
+   center`. Both predate Footer.tsx's stacked column layout, where this is
+   just a `<p>` under the "Fynoptic" column's link list, not the old
+   right-anchored end-column. */
+.footer .ft-col .footer-contact {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  margin-top: 8px;
 }
 
 /* Footer column heads (rendered as h2 — see Footer.tsx for why not h3).
