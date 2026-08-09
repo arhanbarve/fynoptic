@@ -1,114 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-// The state persistence and cross-page progress derivation under test here
-// are unexported internals split across two islands
-// (src/islands/course-one.ts:35-163 and src/islands/profile.ts:22-133),
-// neither of which exports anything but its init*() function. Per Phase 1f
-// these are pinned via faithful copies (cited to source line numbers)
-// rather than modifying either file — this phase's only allowed src/ edit
-// is auth.ts. The whole point of this file is Appendix B's cross-page
-// contract: both copies below must agree on what "module N is done" means.
-
-// ---------------------------------------------------------------------------
-// course-one.ts:35-163 — the CourseState cookie/localStorage sink
-// ---------------------------------------------------------------------------
-
-const DP_STATE_KEY = 'ff_dp_state';
-const COOKIE_NAME = 'ff_dp_state_v2';
-
-interface QuizProgress {
-  completed: boolean;
-  score: number;
-  answers: (number | null)[];
-  correctness: (boolean | null)[];
-}
-interface PostQuizProgress extends QuizProgress {
-  pass: boolean;
-}
-interface CourseState {
-  preQuiz: QuizProgress;
-  m1: { video: boolean; article: boolean };
-  m2: { video: boolean; article: boolean; idExercise: boolean };
-  m3: { video: boolean; article: boolean; drillsChecked: boolean };
-  m4: { article: boolean; auditSubmitted: boolean; auditId: string | null };
-  postQuiz: PostQuizProgress;
-  certificate: { issued: boolean; id: string | null; date: string | null };
-}
-
-const defaultState: CourseState = {
-  preQuiz: { completed: false, score: 0, answers: [], correctness: [] },
-  m1: { video: false, article: false },
-  m2: { video: false, article: false, idExercise: false },
-  m3: { video: false, article: false, drillsChecked: false },
-  m4: { article: false, auditSubmitted: false, auditId: null },
-  postQuiz: { completed: false, score: 0, pass: false, answers: [], correctness: [] },
-  certificate: { issued: false, id: null, date: null },
-};
-
-function setCookie(name: string, value: string, days = 180): void {
-  try {
-    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${days * 86400}; path=/; samesite=lax`;
-  } catch {
-    // cookies may be blocked; ignore
-  }
-}
-
-function getCookie(name: string): string | null {
-  try {
-    const escaped = name.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
-    const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
-    return match?.[1] ? decodeURIComponent(match[1]) : null;
-  } catch {
-    return null;
-  }
-}
-
-function parseStoredState(raw: string): Partial<CourseState> | null {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === 'object' ? (parsed as Partial<CourseState>) : null;
-  } catch {
-    return null;
-  }
-}
-
-function loadState(): CourseState {
-  const cookie = getCookie(COOKIE_NAME);
-  if (cookie) {
-    const parsed = parseStoredState(cookie);
-    if (parsed) return { ...defaultState, ...parsed };
-  }
-  try {
-    const ls = localStorage.getItem(DP_STATE_KEY);
-    if (ls) {
-      const parsed = parseStoredState(ls);
-      if (parsed) return { ...defaultState, ...parsed };
-    }
-  } catch {
-    // localStorage may be unavailable (private mode); ignore.
-  }
-  return { ...defaultState };
-}
-
-function saveState(s: CourseState): void {
-  try {
-    localStorage.setItem(DP_STATE_KEY, JSON.stringify(s));
-  } catch {
-    // localStorage may be unavailable; ignore.
-  }
-  setCookie(COOKIE_NAME, JSON.stringify(s));
-}
-
-// course-one.ts:156-163 — bumpCourseProgress. This is course-one's own view
-// of "is module N done", which feeds ff_course_progress.
-function courseOneModuleIds(s: CourseState): string[] {
-  const ids: string[] = [];
-  if (s.m1.video && s.m1.article) ids.push('dp-m1');
-  if (s.m2.video && s.m2.article && s.m2.idExercise) ids.push('dp-m2');
-  if (s.m3.video && s.m3.article) ids.push('dp-m3');
-  if (s.m4.article && s.m4.auditSubmitted) ids.push('dp-m4');
-  return ids;
-}
+// Phase 10f: the course-one side of this contract now has real exports —
+// src/lib/progress.ts's defaultCourseState/loadCourseState/saveCourseState/
+// deriveModuleIds/getCookie/setCookie, the same functions
+// src/hooks/useCourseState.ts calls. This replaces the byte-for-byte copy
+// of course-one.ts:35-163 that used to live in this file (Phase 1f).
+//
+// The profile side (computeProgressAccurate below) stays a duplicate on
+// purpose: src/components/profile/Profile.tsx (Phase 10c) deliberately
+// keeps its own independent copy of this same read, rather than consuming
+// src/lib/progress.ts — see that component's header comment for why
+// (progressStore's always-present defaultCourseState can't distinguish "no
+// Dark Patterns state at all" from "state exists but every flag is false",
+// which the legacy ARR6/DP4 fallback needs to do). Duplicating it here too
+// is the same convention, for the same reason: it's the only way this test
+// can pin "does profile.ts's real fallback math agree with course-one's
+// real state-shape" without importing a private, unexported function.
+import {
+  COOKIE_NAME,
+  defaultCourseState as defaultState,
+  deriveModuleIds as courseOneModuleIds,
+  DP_STATE_KEY,
+  getCookie,
+  loadCourseState as loadState,
+  saveCourseState as saveState,
+  setCookie,
+  type CourseState,
+} from '../../src/lib/progress';
 
 // ---------------------------------------------------------------------------
 // profile.ts:22-133 — the independent reader of the SAME cookie/localStorage

@@ -1,35 +1,28 @@
-// Read-model over the storage Appendix B calls the "CourseState
+// Read/write model over the storage Appendix B calls the "CourseState
 // cookie/localStorage pair" (`ff_dp_state` / `ff_dp_state_v2`) plus
 // `ff_course_progress`.
 //
-// All three keys are written today by src/islands/course-one.ts's own
-// imperative code (loadState/saveState/bumpCourseProgress, roughly
-// course-one.ts:103-166) and read independently by src/islands/profile.ts.
-// This file does not change either of those write paths.
+// History: through Phase 9 this file was read-only — the three keys were
+// written by src/islands/course-one.ts's own imperative loadState/
+// saveState/bumpCourseProgress, and read independently by
+// src/islands/profile.ts (now src/components/profile/Profile.tsx, which
+// deliberately keeps its own duplicate read of these keys rather than
+// consuming this file — see that component's header comment). `refreshProgressSnapshot`
+// existed as a manual read-hydration helper, but nothing called it and
+// `progressStore.set()` had no caller either, pending "Phase 10f's job":
+// giving this store a real owner.
 //
-// Design choice (Phase 4 plan, "no UI change" + I4 byte-compatible
-// storage): progressStore is read-only in this phase. `progressStore.set()`
-// exists (it's the createStore contract) but nothing calls it except
-// `refreshProgressSnapshot()` below, and nothing calls that automatically
-// either — there is no consumer yet, since course-one and profile are
-// still vanilla islands. Routing course-one's actual writes through this
-// store is Phase 10f's job (course-one -> React), once its imperative
-// loadState/saveState/bumpCourseProgress are retired in favor of a
-// component that owns this store directly. Rebuilding that write path here
-// now, before anything calls it, would be exactly the kind of unrequested
-// duplication that risks drifting out of sync with the real writer.
-//
-// The CourseState shape and its read precedence (cookie ff_dp_state_v2
-// first, then localStorage ff_dp_state, then defaults) are a faithful copy
-// of course-one.ts's loadState/parseStoredState/getCookie — the same
-// duplication convention tests/unit/course-state.test.ts already uses, for
-// the same reason: course-one.ts exports nothing but initCourseOne().
+// Phase 10f: `saveCourseState` below is that owner's write path.
+// src/hooks/useCourseState.ts is its sole caller, and course-one.ts's own
+// loadState/saveState/bumpCourseProgress are retired in favor of it. The
+// on-disk shapes and read precedence (cookie ff_dp_state_v2 first, then
+// localStorage ff_dp_state, then defaults) are unchanged (Appendix B, I4).
 
 import { createStore } from './store';
-import { getCourseProgress } from './storage';
+import { getCourseProgress, setCourseProgress } from './storage';
 
-const DP_STATE_KEY = 'ff_dp_state';
-const COOKIE_NAME = 'ff_dp_state_v2';
+export const DP_STATE_KEY = 'ff_dp_state';
+export const COOKIE_NAME = 'ff_dp_state_v2';
 
 interface QuizProgress {
   completed: boolean;
@@ -62,13 +55,23 @@ export const defaultCourseState: CourseState = {
   certificate: { issued: false, id: null, date: null },
 };
 
-function getCookie(name: string): string | null {
+export function getCookie(name: string): string | null {
   try {
     const escaped = name.replace(/[-[\]/{}()*+?.\\^$|]/g, '\\$&');
     const match = document.cookie.match(new RegExp(`(?:^|; )${escaped}=([^;]*)`));
     return match?.[1] ? decodeURIComponent(match[1]) : null;
   } catch {
     return null;
+  }
+}
+
+// Byte-for-byte match of course-one.ts:103-109's setCookie: 180-day
+// max-age, path=/, samesite=lax (Appendix B, I4).
+export function setCookie(name: string, value: string, days = 180): void {
+  try {
+    document.cookie = `${name}=${encodeURIComponent(value)}; max-age=${days * 86400}; path=/; samesite=lax`;
+  } catch {
+    // cookies may be blocked; ignore
   }
 }
 
@@ -81,7 +84,7 @@ function parseStoredState(raw: string): Partial<CourseState> | null {
   }
 }
 
-function loadCourseState(): CourseState {
+export function loadCourseState(): CourseState {
   const cookie = getCookie(COOKIE_NAME);
   if (cookie) {
     const parsed = parseStoredState(cookie);
@@ -125,4 +128,44 @@ export function refreshProgressSnapshot(): void {
     moduleIds: getCourseProgress(),
     courseState: loadCourseState(),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10f: the real write path. This is the "future client-side consumer"
+// the comment above was waiting for — src/hooks/useCourseState.ts is the
+// sole caller. course-one.ts's own imperative loadState/saveState/
+// bumpCourseProgress (course-one.ts:130-166) are retired in favor of this;
+// the on-disk shapes and precedence are unchanged (Appendix B, I4).
+// ---------------------------------------------------------------------------
+
+// Pure derivation of course-one.ts:159-165's bumpCourseProgress — "which
+// dp-mN ids does this CourseState imply are done" — with no storage side
+// effects, so it's independently testable. tests/unit/course-state.test.ts
+// imports this directly instead of keeping its own copy.
+export function deriveModuleIds(state: CourseState): string[] {
+  const ids: string[] = [];
+  if (state.m1.video && state.m1.article) ids.push('dp-m1');
+  if (state.m2.video && state.m2.article && state.m2.idExercise) ids.push('dp-m2');
+  if (state.m3.video && state.m3.article) ids.push('dp-m3');
+  if (state.m4.article && state.m4.auditSubmitted) ids.push('dp-m4');
+  return ids;
+}
+
+// Dual-write (localStorage + cookie, both on every save — I4), then bumps
+// ff_course_progress (union with whatever's already there, matching
+// bumpCourseProgress's Set-based accumulation — earlier-earned ids are
+// never dropped even though m1-m4 are monotonic in practice) and pushes the
+// new snapshot into progressStore so any same-page consumer stays live.
+export function saveCourseState(next: CourseState): void {
+  try {
+    localStorage.setItem(DP_STATE_KEY, JSON.stringify(next));
+  } catch {
+    // localStorage may be unavailable; ignore.
+  }
+  setCookie(COOKIE_NAME, JSON.stringify(next));
+
+  const moduleIds = [...new Set([...getCourseProgress(), ...deriveModuleIds(next)])];
+  setCourseProgress(moduleIds);
+
+  progressStore.set({ moduleIds, courseState: next });
 }

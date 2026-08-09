@@ -1,67 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-// `mdToHtml` (and its `slugify` helper) live as unexported functions inside
-// `src/islands/course-one.ts:182-235`. They are pure string transforms with
-// zero DOM access, so per the Phase 1 plan (1c) they're pinned here via a
-// byte-for-byte copy rather than a real import, since Phase 1 may not
-// export anything from that file (the plan reserves the one production
-// edit for src/lib/auth.ts). When course-one.ts is split up in Phase 10f
-// and `mdToHtml` gets a real export, replace this copy with an import and
-// these assertions should still pass unchanged.
-function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-');
-}
-
-function mdToHtml(md: string): string {
-  if (!md) return '';
-
-  md = md.replace(
-    /```(\w+)?\n([\s\S]*?)```/g,
-    (_m, lang: string | undefined, code: string) =>
-      `<pre><code class="lang-${lang || 'text'}">${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`,
-  );
-
-  md = md.replace(
-    /^\s*\[!(TIP|NOTE|WARNING)]\s*(?:\**([^\n*]+)\**)?\s*\n([\s\S]*?)(?=\n{2,}|\n\[!|$)/gim,
-    (_m, kind: string, title: string | undefined, body: string) => {
-      const classByKind: Record<string, string> = { TIP: 'co-tip', NOTE: 'co-note', WARNING: 'co-warn' };
-      const iconByKind: Record<string, string> = { TIP: '💡', NOTE: '📝', WARNING: '⚠️' };
-      const head = title ? `<strong>${title.trim()}</strong>` : '';
-      return `<div class="callout ${classByKind[kind] ?? 'co-note'}"><div class="co-ico" aria-hidden="true">${iconByKind[kind] ?? 'ℹ️'}</div><div>${head}${body.trim()}</div></div>`;
-    },
-  );
-
-  md = md.replace(/^(>\s?.+)(\n(>\s?.+))*$/gm, (m) => `<blockquote>${m.replace(/^>\s?/gm, '').trim()}</blockquote>`);
-
-  md = md.replace(/^\s*---\s*$/gm, '<hr/>');
-
-  md = md
-    .replace(/^###\s+(.*)$/gim, (_m, t: string) => {
-      const id = slugify(t);
-      return `<h3 id="${id}">${t}<a class="anchor" href="#${id}" aria-label="Link to section">#</a></h3>`;
-    })
-    .replace(/^##\s+(.*)$/gim, (_m, t: string) => {
-      const id = slugify(t);
-      return `<h2 id="${id}">${t}<a class="anchor" href="#${id}" aria-label="Link to section">#</a></h2>`;
-    })
-    .replace(/^#\s+(.*)$/gim, (_m, t: string) => `<h1>${t}</h1>`);
-
-  md = md
-    .replace(/^\s*[-*]\s+(.*)$/gim, '<li>$1</li>')
-    .replace(/(?:^<li>.*<\/li>\n?)+/gm, (run) => `<ul>${run.trim()}</ul>`);
-
-  md = md
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  md = md.replace(/\n{2,}/g, '</p><p>').replace(/^\s*<p><\/p>/, '');
-  return `<p>${md}</p>`;
-}
+// Phase 10f: `mdToHtml` now has a real export — src/lib/md-to-html.ts,
+// extracted byte-for-byte from src/islands/course-one.ts:193-238 (the
+// Phase 1c pinned copy previously lived here instead, since course-one.ts
+// exported nothing but initCourseOne()). Every assertion below is
+// unchanged from that copy; only the import changed.
+import { mdToHtml } from '../../src/lib/md-to-html';
 
 describe('mdToHtml — supported syntax', () => {
   it('fenced code blocks keep a language class and escape < / >', () => {

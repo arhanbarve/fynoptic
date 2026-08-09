@@ -12,11 +12,28 @@ const A11Y_HC_KEY = 'ff_a11y_hc';
 const A11Y_DYS_KEY = 'ff_a11y_dys';
 const ARTICLES_READ_KEY = 'ff_articles_read';
 const USER_NAME_KEY = 'ff_user_name';
+const RISK_AUDITS_KEY = 'ff_risk_audits';
 
 export type Theme = 'dark' | 'light';
 
 const stringArraySchema = z.array(z.string());
 const themeSchema = z.enum(['dark', 'light']);
+
+// course-one.ts:1102-1119's audit entry shape (Appendix B: `ff_risk_audits`
+// is a separate, append-only array — not part of CourseState).
+const riskAuditEntrySchema = z.object({
+  id: z.string(),
+  dateISO: z.string(),
+  merchant: z.string(),
+  action: z.string(),
+  date: z.string(),
+  channel: z.string(),
+  saw: z.string(),
+  patterns: z.string(),
+  evidence: z.string(),
+});
+
+export type RiskAuditEntry = z.infer<typeof riskAuditEntrySchema>;
 
 function readJson(key: string): unknown {
   try {
@@ -124,6 +141,19 @@ export function setA11yDyslexia(enabled: boolean): void {
   } catch {
     // ignore
   }
+}
+
+// Append-only list of full Risk Audit entries (course-one.ts:1102-1119).
+// Same zod-validated, empty-array-on-anything-else convention as the other
+// getters here; a corrupted or unexpected on-disk value is treated as no
+// history rather than thrown.
+export function getRiskAudits(): RiskAuditEntry[] {
+  const result = z.array(riskAuditEntrySchema).safeParse(readJson(RISK_AUDITS_KEY));
+  return result.success ? result.data : [];
+}
+
+export function appendRiskAudit(entry: RiskAuditEntry): void {
+  writeJson(RISK_AUDITS_KEY, [...getRiskAudits(), entry]);
 }
 
 // ff_user_name is a legacy key too: a raw string (not JSON), same on-disk
