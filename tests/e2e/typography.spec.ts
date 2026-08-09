@@ -3,18 +3,19 @@ import { test, expect } from '@playwright/test';
 // Phase 3 (type system) split the old single --display-face (Spectral) into
 // --display-face (Helvetica, sans headings/titles), --editorial-face
 // (Spectral, long-form reading content), --wordmark-face (an alias of
-// --editorial-face, for the logo), and --mono-face. This spec pins the
-// computed font-family each token-consuming selector resolves to, and
-// confirms the retired @fontsource-variable/sora package never gets
-// requested by any page.
+// --display-face, for the logo, as of the navbar fix in commit 2), and
+// --mono-face. This spec pins the computed font-family each token-consuming
+// selector resolves to, and confirms the retired @fontsource-variable/sora
+// package never gets requested by any page.
 
 test.describe('Phase 3 type system', () => {
-  test('logo wordmark renders in Spectral', async ({ page }) => {
+  test('logo wordmark renders in Helvetica, not the editorial serif', async ({ page }) => {
     await page.goto('/');
     const fontFamily = await page
       .locator('.logo-text')
       .evaluate((el) => getComputedStyle(el).fontFamily);
-    expect(fontFamily).toContain('Spectral');
+    expect(fontFamily).toContain('Helvetica');
+    expect(fontFamily).not.toContain('Spectral');
   });
 
   test('a nav link renders in Inter', async ({ page }) => {

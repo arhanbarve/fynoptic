@@ -26,6 +26,27 @@ test.describe('theme toggle', () => {
   });
 });
 
+test.describe('header height', () => {
+  // AC-1.1: the header's logo box and other theme-dependent children must
+  // occupy an identical border box in both themes, at every width — a
+  // regression test for the 61px (dark) vs 69px (light) shift caused by the
+  // light-theme plate growing the logo's content box under box-sizing:
+  // content-box (see redesign.css §1.1).
+  for (const width of [390, 900, 1440]) {
+    test(`.header height is identical in light and dark at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto('/');
+
+      const darkHeight = await page.locator('.header').evaluate((el) => el.getBoundingClientRect().height);
+
+      await page.locator('#theme-btn').click();
+      const lightHeight = await page.locator('.header').evaluate((el) => el.getBoundingClientRect().height);
+
+      expect(lightHeight).toBe(darkHeight);
+    });
+  }
+});
+
 test.describe('mobile drawer', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 

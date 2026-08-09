@@ -24,12 +24,14 @@
 :root {
   --display-face:  'Helvetica Neue', Helvetica, Arial, sans-serif;
   --editorial-face:'Spectral', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-  --wordmark-face: var(--editorial-face);
+  --wordmark-face: var(--display-face);
   --mono-face:     ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   /* styles.css reads --header-h in two places but never defines it, so both fell
-     back to guesses (64px and 16px offsets) that no longer match the bar. */
-  --header-h: 56px;
+     back to guesses (64px and 16px offsets) that no longer match the bar.
+     Measured empirically at 1440x900 after the 1.1 logo-box fix landed: the
+     bar is 58px (offsetHeight) in both themes, identical — see AC-1.1. */
+  --header-h: 58px;
 
   /* One flat interface hue replaces the gradient. Dark values here; light below. */
   --db-optic: #94ABFF;
@@ -82,21 +84,37 @@
    header the F vanishes and only the lens is left. It gets the same fixed dark plate
    the partner marks get, which keeps one lockup in both themes instead of two. */
 .logo { display: inline-flex; align-items: center; gap: 9px; }
-.logo img {
-  width: 26px; height: 26px; object-fit: contain; display: block;
-  box-sizing: content-box;
-}
-:is(html[data-theme="light"], body[data-theme="light"]) .logo img,
-:is(html[data-theme="light"], body[data-theme="light"]) .footer-logo {
-  background: var(--db-plate);
-  padding: 4px;
+/* Specificity note: legacy.css:3155 is `.header .logo img` (0,2,1) and was
+   silently beating the old bare `.logo img` rule here, which is why the mark
+   rendered at 40px rather than the 26px this layer asked for. Matching that
+   selector is what makes this rule take effect at all.
+
+   The plate is painted INSIDE a fixed border box rather than added around a
+   content box: under the old `content-box` + `padding:4px` pairing the light
+   theme's mark occupied 48px against dark's 40px, which is the 8px header
+   height shift between themes. */
+.header .logo img,
+.header .logo img:is([src]) {
+  width: 32px;
+  height: 32px;
+  padding: 3px;
+  box-sizing: border-box;      /* was content-box — this is the actual fix */
+  object-fit: contain;
+  display: block;
+  background: transparent;      /* dark: no plate, but the same occupied box */
   border-radius: 5px;
-  box-sizing: content-box;
+}
+:is(html[data-theme="light"], body[data-theme="light"]) .header .logo img {
+  background: var(--db-plate);  /* light: plate paints inside the same 32px */
 }
 /* The footer mark is the same white-F-on-transparent artwork as the header's and
    needs the same plate; without it only the teal lens survived on the light
    footer and the F disappeared. */
 :is(html[data-theme="light"], body[data-theme="light"]) .footer-logo {
+  background: var(--db-plate);
+  padding: 4px;
+  border-radius: 5px;
+  box-sizing: content-box;
   width: 24px; height: 24px; object-fit: contain;
 }
 /* legacy set this to 30px, and the first pass at 1.55rem (~25px) was still a
@@ -305,7 +323,7 @@ html body .auth-link button {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 6px;
   object-fit: cover;
 }
 #nav-initials {
@@ -314,7 +332,7 @@ html body .auth-link button {
   justify-content: center;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: 6px;
   background: var(--db-optic);
   color: var(--db-optic-ink) !important;   /* fill and its ink travel together */
   font-weight: 600;
@@ -396,6 +414,7 @@ section[aria-labelledby="rack-heading"] {
 html body .header .nav {
   padding-block: 10px !important;
   gap: clamp(1rem, 3vw, 2.5rem);
+  min-height: 36px;   /* 36 + 2×10 padding + 1 border = 57 floor; guards against future children shifting the bar */
 }
 
 /* .footer supplies its own 32px inline padding *and* (pre-Phase-5) contained
@@ -785,7 +804,7 @@ html body .header .user-icon[data-modal-open] {
   height: 32px !important;
   flex: 0 0 auto !important;
   padding: 0 12px 0 30px !important;
-  border-radius: 16px !important;
+  border-radius: 6px !important;
   background-position: 8px center !important;
   background-color: transparent;
 }
