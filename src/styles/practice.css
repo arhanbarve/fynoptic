@@ -2,13 +2,224 @@
 /* PRACTICE PAGE                */
 /* ---------------------------- */
 
-/* All of the practice page's styles currently live in styles.css
-   (.wizard-panel, .topic-btn, .mc-option, #stage, #topics-scroller,
-   etc.). This file exists so the <link> in practice.html resolves
-   instead of 404ing, and as the place to put practice-only overrides in
-   future.
+/* Design-fixes batch, commit 8 (2026-08-09): visual redesign of the 3-step
+   wizard (PracticeWizard.tsx) — step indicator, bank cards, pill groups,
+   per-topic counts, and a structured step-3 summary card. This file loads
+   after legacy.css/redesign.css (practice.astro imports it, which is
+   imported after Base.astro's own stylesheet imports resolve), so rules
+   here win the cascade without needing to out-!important every legacy
+   declaration — only where legacy/redesign already used !important on a
+   property this file also sets. Do not copy rules out of legacy.css into
+   this file; that duplication is what made the old styles hard to reason
+   about. */
 
-   Deliberately empty: practice.html loads styles.css first and this file
-   second, so anything added here wins over styles.css. Do not copy rules
-   out of styles.css into this file — duplicated cascading rules are what
-   made these styles hard to reason about in the first place. */
+/* ---- Step indicator ------------------------------------------------- */
+.wizard-progress {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+.wizard-progress-step {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  color: var(--text-300);
+}
+.wizard-progress-step:not(:last-child) {
+  margin-right: .75rem;
+  padding-right: .75rem;
+}
+.wizard-progress-step:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: 28px;
+  height: 1px;
+  margin-left: .75rem;
+  background: rgba(var(--tint-rgb), .16);
+}
+.wizard-progress-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  font-size: .8rem;
+  font-weight: 700;
+  background: rgba(var(--tint-rgb), .07);
+  border: 1px solid rgba(var(--tint-rgb), .14);
+  color: var(--text-300);
+}
+.wizard-progress-label {
+  font-size: .85rem;
+  font-weight: 600;
+  display: none;
+}
+@media (min-width: 560px) {
+  .wizard-progress-label { display: inline; }
+}
+.wizard-progress-step.is-current .wizard-progress-index {
+  background: var(--primary-600);
+  border-color: var(--primary-600);
+  color: #fff;
+}
+.wizard-progress-step.is-current .wizard-progress-label,
+.wizard-progress-step.is-current { color: var(--text-100); }
+.wizard-progress-step.is-done .wizard-progress-index {
+  background: rgba(var(--tint-rgb), .07);
+  border-color: var(--success-500);
+  color: var(--success-500);
+}
+.wizard-progress-step.is-done::after,
+.wizard-progress-step.is-done ~ .wizard-progress-step::after {
+  background: rgba(var(--tint-rgb), .16);
+}
+
+/* ---- Step 1: bank cards ---------------------------------------------- */
+.bank-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.bank-card {
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  text-align: left;
+  padding: .75rem .9rem;
+  border-radius: 12px;
+  background: rgba(var(--tint-rgb), .04);
+  border: 1px solid rgba(var(--tint-rgb), .10);
+  color: var(--text-100);
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease, background .12s ease;
+}
+.bank-card:hover { transform: translateY(-1px); border-color: rgba(var(--tint-rgb), .2); }
+.bank-card.is-selected {
+  border-color: var(--primary-600);
+  background: rgba(var(--tint-rgb), .07);
+  box-shadow: 0 0 0 2px rgba(63, 106, 255, .18) inset;
+}
+.bank-card-name { font-weight: 700; font-family: var(--font-head); }
+.bank-card-meta { font-size: .82rem; color: var(--text-300); }
+.bank-card.is-selected .bank-card-meta { color: var(--text-100); opacity: .8; }
+
+/* .wizard-fields (legacy.css:5694) is a 2-col grid, which makes
+   #adapt-every-field/#adaptive-field actual grid items — so their old
+   `grid-column: span 6` (written for a since-removed 12-col .pc-grid) would
+   otherwise blow up the 2-col track. Same id specificity, later file: this
+   wins the tie and lets the 4 fields fall into a plain 2x2. */
+#adapt-every-field,
+#adaptive-field {
+  grid-column: auto;
+}
+
+/* ---- Step 1: segmented pill groups (Questions / Adapt Every) --------- */
+.pill-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  padding: .25rem;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb), .04);
+  border: 1px solid rgba(var(--tint-rgb), .08);
+}
+.pill {
+  min-width: 2.4rem;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .88rem;
+  color: var(--text-300);
+  background: transparent;
+  transition: background .12s ease, color .12s ease;
+}
+.pill:hover:not(:disabled) { color: var(--text-100); }
+.pill.is-selected {
+  background: var(--primary-600);
+  color: #fff;
+}
+.pill:disabled { opacity: .5; cursor: not-allowed; }
+#adapt-every-field[aria-disabled="true"] .pill-group,
+.pill-group[aria-disabled="true"] { opacity: .6; }
+
+/* ---- Step 2: topic chips with trailing counts ------------------------ */
+#topics-list.topics-list {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+/* #topics-list beats .practice-shell .topic-btn (id+class > class+class)
+   without needing !important, per the project's "specificity, not
+   !important" convention. */
+#topics-list .topic-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  text-align: left;
+}
+.topic-btn-name { flex: 1 1 auto; }
+.topic-btn-count {
+  flex: 0 0 auto;
+  min-width: 1.6rem;
+  padding: .1rem .45rem;
+  border-radius: 999px;
+  font-size: .78rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-300);
+  background: rgba(var(--tint-rgb), .08);
+}
+.topic-btn.is-selected .topic-btn-count {
+  color: #fff;
+  background: rgba(91, 140, 255, .55);
+}
+.topics-selected-count { margin: .5rem 0 0; }
+/* legacy.css's `.practice-shell .topics-actions{justify-content:space-between}`
+   (0,2,0) shoves Select All / Clear to opposite edges of the panel now that
+   the panel is wider than the old two-button pair was designed for.
+   `.wizard-panel .topics-actions` ties its specificity (0,2,0); later file
+   wins the tie. */
+.wizard-panel .topics-actions {
+  justify-content: center;
+  gap: .6rem;
+}
+
+/* ---- Step 3: structured summary card ---------------------------------- */
+.summary-card {
+  margin: 0 auto 1rem;
+  max-width: 420px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--tint-rgb), .10);
+  background: rgba(var(--tint-rgb), .03);
+  padding: .25rem 1rem;
+}
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .55rem 0;
+  border-bottom: 1px solid rgba(var(--tint-rgb), .08);
+}
+.summary-row:last-child { border-bottom: 0; }
+.summary-label { color: var(--text-300); font-size: .88rem; }
+.summary-value { color: var(--text-100); font-weight: 700; text-align: right; }
+
+/* legacy.css:4428 `#question-count { min-width: 140px }` and legacy.css:4425
+   `#adapt-every { min-width: 180px }` (an id selector's `.sr-only` had no
+   answer for — min-width always wins over width regardless of the width
+   value, and no stack of classes outranks an id) were forcing the hidden
+   #question-count/#adapt-every selects to lay out at real width, right
+   edge landing past the viewport at narrow widths. clip-path still made
+   them invisible, but the layout box was real, which both corrupted
+   full-page screenshot capture (canvas widened to fit it) and left an
+   oversized off-flow box for no reason. id+class beats a bare id. */
+#question-count.sr-only,
+#adapt-every.sr-only {
+  width: 1px;
+  min-width: 0;
+  padding: 0;
+}

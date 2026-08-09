@@ -88,6 +88,45 @@ test('changing category updates body[data-cat] (legacy.css hook, I3)', async ({ 
   await expect(page.locator('body')).toHaveAttribute('data-cat', 'Economics');
 });
 
+// Design-fixes batch, commit 8 (2026-08-09): step 1's bank cards are new
+// visible UI in front of the hidden #category <select> — clicking one must
+// drive the same handleCategoryChange() the select does.
+test('clicking a bank card selects it and updates body[data-cat] (I3)', async ({ page }) => {
+  await page.goto('/practice');
+  await page.locator('#wiz-next-1').waitFor();
+  await expect(page.locator('body')).toHaveAttribute('data-cat', 'Personal Finance');
+
+  const econCard = page.locator('.bank-card', { hasText: 'Economics' });
+  await econCard.click();
+  await expect(econCard).toHaveClass(/is-selected/);
+  await expect(page.locator('body')).toHaveAttribute('data-cat', 'Economics');
+});
+
+// Each topic chip gains a trailing count (§7.4). Personal Finance's 6 topics
+// sum to 390 questions across its three difficulty buckets (§7.1) — summing
+// the rendered counts is a stronger check than just "some number renders".
+test('topic chips show per-topic question counts', async ({ page }) => {
+  await goToStep2(page);
+  const counts = await page.locator('#topics-list .topic-btn-count').allTextContents();
+  expect(counts).toHaveLength(6); // Personal Finance is the default category
+  const sum = counts.reduce((total, c) => total + Number(c), 0);
+  expect(sum).toBe(390);
+});
+
+// §7.4: role="checkbox" now pairs with aria-checked, not the mismatched
+// aria-pressed it shipped with.
+test('.topic-btn pairs role="checkbox" with aria-checked, not aria-pressed', async ({ page }) => {
+  await goToStep2(page);
+  const chip = page.locator('#topics-list .topic-btn').first();
+  await expect(chip).toHaveAttribute('role', 'checkbox');
+  await expect(chip).toHaveAttribute('aria-checked', 'false');
+  expect(await chip.getAttribute('aria-pressed')).toBeNull();
+
+  await chip.click();
+  await expect(chip).toHaveAttribute('aria-checked', 'true');
+  expect(await chip.getAttribute('aria-pressed')).toBeNull();
+});
+
 test("step 3's Reset button ships disabled — there is no active session while the wizard is showing (10d fix)", async ({
   page,
 }) => {

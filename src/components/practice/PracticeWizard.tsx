@@ -18,13 +18,28 @@
 //     'Please select at least one topic.' check (:624) — that check can
 //     never fire once step 2 already guarantees a non-empty selection, so
 //     it isn't ported here at all (dead code, not carried forward).
-//   - Step 3's summary line and its exact punctuation/pluralization.
-//   - Topic chip labels are the raw slug (e.g. "cash_flow"), not a
-//     prettified version — updateChips()/niceTopic() only prettify text
-//     shown *after* a session starts, never the step-2 chip itself.
-//   - role="checkbox" + aria-pressed on topic buttons is the original's
-//     own mismatch (aria-checked would be the correct pairing) — kept as
-//     shipped rather than "improved" silently.
+//   - Step 3's summary line (#wiz-summary) keeps its exact punctuation and
+//     pluralization; it's now the accessible text companion (sr-only) to
+//     the visual summary card below, rather than the only summary on-screen.
+//
+// Design-fixes batch, commit 8 (2026-08-09): all three steps got a visual
+// pass — a step indicator, bank cards, pill groups, per-topic counts, and a
+// structured step-3 summary card.
+//   - #category / #question-count / #adapt-every stay real <select>
+//     elements (visually hidden via .sr-only, never display:none), because
+//     practice.spec.ts drives them with page.selectOption(...) and
+//     body[data-cat] (legacy.css contract I3) is keyed off #category's
+//     value. The new cards/pills call the same state setters the selects
+//     do — they don't replace them, they front them.
+//   - .topic-btn's role="checkbox" now pairs with aria-checked (was
+//     aria-pressed, a genuine ARIA mismatch). practice.spec.ts asserts on
+//     .is-selected, not the ARIA attribute, so fixing this is safe.
+//   - The comment that used to live here claiming topic chips show raw
+//     slugs like "cash_flow" described a bank that's no longer shipped —
+//     the shipped topic keys are already human-readable ("Macroeconomic
+//     Theory", "Fixed Income & Bonds"). There's no prettification to
+//     build; the per-topic question count shown alongside each chip is
+//     computed straight from `bank`.
 import { useEffect, useMemo, useState } from 'react';
 import { showToast } from '@/lib/toast';
 import type { PracticeBank } from '@/types';
@@ -58,6 +73,13 @@ export interface PracticeWizardProps {
 
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50] as const;
 const ADAPT_EVERY_OPTIONS = [5, 10, 15, 20] as const;
+const STEP_LABELS = ['Build session', 'Choose units', 'Start practice'] as const;
+
+/** Sum of a topic's question counts across its difficulty buckets. */
+function countTopicQuestions(byDifficulty: Record<string, unknown[]> | undefined): number {
+  if (!byDifficulty) return 0;
+  return Object.values(byDifficulty).reduce((sum, items) => sum + items.length, 0);
+}
 
 export function PracticeWizard({ bank, categories, hasSession, onComplete }: PracticeWizardProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -68,6 +90,33 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
   const [adaptWindow, setAdaptWindow] = useState(10);
 
   const topics = useMemo(() => Object.keys(bank[category] ?? {}).sort(), [bank, category]);
+
+  // Per-topic question counts for the current category (step 2 chip badges,
+  // step 3's "Drawing from" total). Derived from the real bank data rather
+  // than any hardcoded table, so it can't go stale the way a comment can.
+  const topicCounts = useMemo(() => {
+    const catBank = bank[category] ?? {};
+    const counts: Record<string, number> = {};
+    for (const t of Object.keys(catBank)) counts[t] = countTopicQuestions(catBank[t]);
+    return counts;
+  }, [bank, category]);
+
+  // Per-category topic/question totals for the step 1 bank cards.
+  const bankStats = useMemo(() => {
+    const stats: Record<string, { topics: number; questions: number }> = {};
+    for (const cat of categories) {
+      const catBank = bank[cat] ?? {};
+      const topicKeys = Object.keys(catBank);
+      const questions = topicKeys.reduce((sum, t) => sum + countTopicQuestions(catBank[t]), 0);
+      stats[cat] = { topics: topicKeys.length, questions };
+    }
+    return stats;
+  }, [bank, categories]);
+
+  const drawingFrom = useMemo(
+    () => [...selectedTopics].reduce((sum, t) => sum + (topicCounts[t] ?? 0), 0),
+    [selectedTopics, topicCounts],
+  );
 
   // I3: `data-cat` on <body> drives legacy.css's `body[data-cat="Economics"]`
   // rules (topics-card sizing/typography). practice.ts kept this in sync on
@@ -121,15 +170,55 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
 
   return (
     <div id="practice-wizard" className="wizard" aria-live="polite" data-step={step}>
+      <ol className="wizard-progress" aria-hidden="true">
+        {STEP_LABELS.map((label, i) => {
+          const n = i + 1;
+          const state = n < step ? 'is-done' : n === step ? 'is-current' : 'is-upcoming';
+          return (
+            <li key={label} className={`wizard-progress-step ${state}`}>
+              <span className="wizard-progress-index">{n}</span>
+              <span className="wizard-progress-label">{label}</span>
+            </li>
+          );
+        })}
+      </ol>
+
       {step === 1 && (
         <section id="step-1" className="wizard-panel" aria-label="Step 1: Build your session">
           <h2 className="topics-title center">Build your session</h2>
           <div className="wizard-fields">
             <div>
-              <label htmlFor="category" className="pc-label">
+              <span className="pc-label" id="category-label">
                 Category
-              </label>
-              <select id="category" className="input" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
+              </span>
+              <div className="bank-cards" role="group" aria-labelledby="category-label">
+                {categories.map((c) => {
+                  const stats = bankStats[c] ?? { topics: 0, questions: 0 };
+                  const active = c === category;
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      className={active ? 'bank-card is-selected' : 'bank-card'}
+                      aria-pressed={active}
+                      onClick={() => handleCategoryChange(c)}
+                    >
+                      <span className="bank-card-name">{c}</span>
+                      <span className="bank-card-meta">
+                        {stats.topics} topic{stats.topics === 1 ? '' : 's'} · {stats.questions} questions
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <select
+                id="category"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
+                value={category}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+              >
                 {categories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -139,12 +228,27 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
             </div>
 
             <div>
-              <label htmlFor="question-count" className="pc-label">
+              <span className="pc-label" id="question-count-label">
                 Questions
-              </label>
+              </span>
+              <div className="pill-group" role="group" aria-labelledby="question-count-label">
+                {QUESTION_COUNT_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={n === totalQuestions ? 'pill is-selected' : 'pill'}
+                    aria-pressed={n === totalQuestions}
+                    onClick={() => setTotalQuestions(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
               <select
                 id="question-count"
-                className="input"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
                 value={totalQuestions}
                 onChange={(e) => setTotalQuestions(Number(e.target.value))}
               >
@@ -157,12 +261,28 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
             </div>
 
             <div id="adapt-every-field" className="pc-field">
-              <label className="pc-label" htmlFor="adapt-every">
+              <span className="pc-label" id="adapt-every-label">
                 Adapt Every
-              </label>
+              </span>
+              <div className="pill-group" role="group" aria-labelledby="adapt-every-label" aria-disabled={!adaptive}>
+                {ADAPT_EVERY_OPTIONS.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    disabled={!adaptive}
+                    className={n === adaptWindow ? 'pill is-selected' : 'pill'}
+                    aria-pressed={n === adaptWindow}
+                    onClick={() => setAdaptWindow(n)}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
               <select
                 id="adapt-every"
-                aria-label="Adapt Every"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
                 disabled={!adaptive}
                 value={adaptWindow}
                 onChange={(e) => setAdaptWindow(Number(e.target.value))}
@@ -218,16 +338,21 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
                       className={selected ? 'topic-btn is-selected' : 'topic-btn'}
                       data-value={t}
                       role="checkbox"
-                      aria-pressed={selected}
+                      aria-checked={selected}
                       onClick={() => toggleTopic(t)}
                     >
-                      {t}
+                      <span className="topic-btn-name">{t}</span>
+                      <span className="topic-btn-count">{topicCounts[t] ?? 0}</span>
                     </button>
                   );
                 })
               )}
             </div>
           </div>
+
+          <p className="topics-selected-count muted tiny center">
+            {selectedTopics.size} of {topics.length} selected
+          </p>
 
           <div className="topics-actions center">
             <button id="topics-select-all" className="btn btn-ghost" type="button" onClick={selectAllTopics}>
@@ -253,7 +378,35 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
         <section id="step-3" className="wizard-panel" aria-label="Step 3: Start practice">
           <h2 className="topics-title center">Ready to start?</h2>
           <h3 className="topics-title center">Right-click to cross out answers</h3>
-          <p id="wiz-summary" className="muted center">
+
+          <div className="summary-card">
+            <div className="summary-row">
+              <span className="summary-label">Bank</span>
+              <span className="summary-value">{category}</span>
+            </div>
+            <div className="summary-row">
+              <span className="summary-label">Topics</span>
+              <span className="summary-value">
+                {selectedTopics.size} of {topics.length}
+              </span>
+            </div>
+            <div className="summary-row">
+              <span className="summary-label">Drawing from</span>
+              <span className="summary-value">
+                {drawingFrom} question{drawingFrom === 1 ? '' : 's'}
+              </span>
+            </div>
+            <div className="summary-row">
+              <span className="summary-label">Session length</span>
+              <span className="summary-value">{totalQuestions} questions</span>
+            </div>
+            <div className="summary-row">
+              <span className="summary-label">Adaptive</span>
+              <span className="summary-value">{adaptive ? `On · adjusts every ${adaptWindow}` : 'Off'}</span>
+            </div>
+          </div>
+
+          <p id="wiz-summary" className="sr-only">
             {summary}
           </p>
 
