@@ -1,11 +1,41 @@
 import { test, expect, type Page } from '@playwright/test';
+import { PNG } from 'pngjs';
 
-// Characterization of islands/course-one.ts against the current vanilla
-// courseone.astro markup, before any React conversion. Appendix B's
-// CourseState is the persistence contract this spec seeds through —
-// exactly the same localStorage key (`ff_dp_state`) the app itself reads
-// via loadState(), so seeding is just "what a returning learner's browser
-// already has," not a testing shortcut that bypasses real behavior.
+// Characterization of <CourseOne /> (src/components/course/CourseOne.tsx +
+// PreQuiz/Module/IdExercise/RiskAudit/PostQuiz/Certificate/ProgressSidebar),
+// the Phase 10f React conversion of the old islands/course-one.ts vanilla
+// island (1,407 lines, retired in this same phase). Every behavioral
+// assertion from the pre-conversion characterization spec is carried over
+// unchanged; only selectors/expectations that track a deliberate structural
+// change were updated:
+//
+//   - Section lock chrome (`.locked` class, `inert`, `aria-hidden`,
+//     `.locked-scrim`) is still applied to the exact same section elements
+//     by <LockableSection> in CourseOne.tsx — same selectors as before.
+//   - The certificate section is no longer always-present-but-CSS-hidden
+//     (`.certificate.ready` never actually got toggled by the old code, so
+//     it never rendered — O6). It now mounts/unmounts entirely based on
+//     `state.postQuiz.pass`: assertions below check for its *presence*,
+//     not a class.
+//   - `#post-retake` is conditionally rendered (unmounted when not
+//     applicable), not merely toggled via the `hidden` DOM property — the
+//     old `.btn { display: inline-block }`-beats-`[hidden]` workaround this
+//     spec used to need no longer applies because the element isn't in the
+//     DOM at all once retake succeeds. `toBeHidden()` covers both "not in
+//     DOM" and "hidden".
+//   - `#id-ex-root`/`#id-ex-submit`/`#id-ex-result` and
+//     `#audit-form`/`#audit-generate`/`#audit-output`/`#audit-actions`/
+//     `#copy-audit` are real ids again (IdExercise.tsx/RiskAudit.tsx) —
+//     same ids the vanilla markup used.
+//
+// New in this phase (O6, the "Gate additions" in the Phase 10f plan item):
+// the certificate reveal is gated on a real ≥80% pass, prints the
+// profile-set learner name (`ff_user_name`, written by the profile settings
+// panel — Phase 10c), and the badge PNG export now includes `xmlns` on both
+// `<svg>`s so the exported image actually decodes to filled gradient
+// pixels instead of a blank/broken image (verified below by decoding the
+// downloaded PNG's real pixel data, not just checking the file is
+// non-empty).
 
 const DP_STATE_KEY = 'ff_dp_state';
 
@@ -29,12 +59,16 @@ const DEFAULT_STATE: Required<CourseStateSeed> = {
   certificate: { issued: false, id: null, date: null },
 };
 
-/** Seeds ff_dp_state (the same key loadState() reads) before navigating. */
-async function seedAndGoto(page: Page, seed: CourseStateSeed): Promise<void> {
+/** Seeds ff_dp_state (the same key useCourseState's loadCourseState() reads) and, optionally, ff_user_name, before navigating. */
+async function seedAndGoto(page: Page, seed: CourseStateSeed, userName?: string): Promise<void> {
   const state = { ...DEFAULT_STATE, ...seed };
-  await page.addInitScript((s) => {
-    localStorage.setItem('ff_dp_state', JSON.stringify(s));
-  }, state);
+  await page.addInitScript(
+    ({ s, name }) => {
+      localStorage.setItem('ff_dp_state', JSON.stringify(s));
+      if (name) localStorage.setItem('ff_user_name', name);
+    },
+    { s: state, name: userName },
+  );
   await page.goto('/courseone');
 }
 
@@ -44,6 +78,31 @@ async function fetchAnswerIndices(page: Page, path: string): Promise<number[]> {
     const data = (await res.json()) as { items: { answer_index: number }[] };
     return data.items.map((i) => i.answer_index);
   }, path);
+}
+
+/** Seeds every module as complete, fetches the real post-quiz answer key, and submits a passing run. Leaves the page on a revealed certificate. */
+async function reachPassedCertificate(page: Page, userName?: string): Promise<number[]> {
+  await seedAndGoto(
+    page,
+    {
+      preQuiz: { completed: true, score: 100, answers: [], correctness: [] },
+      m1: { video: true, article: true },
+      m2: { video: true, article: true, idExercise: true },
+      m3: { video: true, article: true, drillsChecked: true },
+      m4: { article: true, auditSubmitted: true, auditId: 'AUD-seed' },
+    },
+    userName,
+  );
+
+  const answers = await fetchAnswerIndices(page, '/data/quiz.json');
+  const items = page.locator('#post-quiz-root .q-item');
+  await expect(items).toHaveCount(answers.length);
+  for (let i = 0; i < answers.length; i++) {
+    await items.nth(i).locator(`input[type="radio"][value="${answers[i]}"]`).check();
+  }
+  await page.locator('#post-submit').click();
+  await expect(page.locator('#certificate')).toBeVisible();
+  return answers;
 }
 
 test('pre-quiz gates module 1 until completed', async ({ page }) => {
@@ -108,7 +167,7 @@ test('video anti-skip: seeking forward snaps back, and playbackRate is forced to
   expect(await video.evaluate((v: HTMLVideoElement) => v.playbackRate)).toBe(1);
 });
 
-test('the identification exercise grades all-or-nothing', async ({ page }) => {
+test('the identification exercise loads 10 items and grades all-or-nothing', async ({ page }) => {
   await seedAndGoto(page, {
     preQuiz: { completed: true, score: 100, answers: [], correctness: [] },
     m1: { video: true, article: true },
@@ -116,8 +175,9 @@ test('the identification exercise grades all-or-nothing', async ({ page }) => {
 
   const submit = page.locator('#id-ex-submit');
   const items = page.locator('#id-ex-root .q-item');
-  await expect(items.first()).toBeVisible();
+  await expect(items).toHaveCount(10);
   const answers = await fetchAnswerIndices(page, '/data/id-exercise.json');
+  expect(answers).toHaveLength(10);
 
   // Answer every item wrong first (pick an index that is never the answer).
   for (let i = 0; i < answers.length; i++) {
@@ -171,7 +231,7 @@ test('the risk audit form generates a summary and stores it locally', async ({ p
   expect(stored.m4.auditSubmitted).toBe(true);
 });
 
-test('post-quiz: passing at >=80% unlocks the certificate section; failing offers a retake', async ({ page }) => {
+test('post-quiz: failing keeps the certificate hidden and offers a retake; passing at >=80% reveals it', async ({ page }) => {
   await seedAndGoto(page, {
     preQuiz: { completed: true, score: 100, answers: [], correctness: [] },
     m1: { video: true, article: true },
@@ -179,6 +239,8 @@ test('post-quiz: passing at >=80% unlocks the certificate section; failing offer
     m3: { video: true, article: true, drillsChecked: true },
     m4: { article: true, auditSubmitted: true, auditId: 'AUD-seed' },
   });
+
+  await expect(page.locator('#certificate')).toHaveCount(0);
 
   const answers = await fetchAnswerIndices(page, '/data/quiz.json');
   const items = page.locator('#post-quiz-root .q-item');
@@ -192,18 +254,15 @@ test('post-quiz: passing at >=80% unlocks the certificate section; failing offer
   await page.locator('#post-submit').click();
   await expect(page.locator('#post-result')).toContainText('Below 80%');
   await expect(page.locator('#post-retake')).toBeVisible();
-  await expect(page.locator('#module-1')).not.toHaveClass(/certificate.*ready/); // sanity: no crash
+  await expect(page.locator('#certificate')).toHaveCount(0);
 
   // Retake resets the quiz.
   await page.locator('#post-retake').click();
   await expect(page.locator('#post-result')).toHaveText('');
-  // Real, sitewide quirk (not fixed here): `.btn { display: inline-block }`
-  // in legacy.css is an author-stylesheet rule, and author rules beat the
-  // UA default `[hidden] { display: none }` at equal specificity regardless
-  // of source order — so any `<button class="btn ...">` stays visually
-  // displayed even once `.hidden = true`. Assert the actual `hidden`
-  // property course-one.ts sets, not visual visibility.
-  await expect(page.locator('#post-retake')).toHaveJSProperty('hidden', true);
+  // #post-retake unmounts entirely once showRetake (completed && !pass) is
+  // false again — not merely `hidden`, since PostQuiz.tsx conditionally
+  // renders it rather than toggling a `hidden` DOM property.
+  await expect(page.locator('#post-retake')).toBeHidden();
   const afterRetake = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '{}'), DP_STATE_KEY);
   expect(afterRetake.postQuiz.completed).toBe(false);
 
@@ -213,6 +272,7 @@ test('post-quiz: passing at >=80% unlocks the certificate section; failing offer
   }
   await page.locator('#post-submit').click();
   await expect(page.locator('#post-result')).toContainText('Pass');
+  await expect(page.locator('#certificate')).toBeVisible();
 
   const stored = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '{}'), DP_STATE_KEY);
   expect(stored.postQuiz.pass).toBe(true);
@@ -228,10 +288,59 @@ test('the progress sidebar reflects completed steps, and state survives a reload
   // pre, m1_video, m1_article are all done() -> the first incomplete step
   // (and therefore ps-item--done boundary) is m2_video, index 3.
   await expect(page.locator('#progress-list li.ps-item--done')).toHaveCount(3);
-  const fillWidth = await page.locator('#ps-fill').evaluate((el) => el.style.width);
+  const fillWidth = await page.locator('#ps-fill').evaluate((el) => (el as HTMLElement).style.width);
   expect(fillWidth).not.toBe('0%');
 
   await page.reload();
   await expect(page.locator('#progress-list li.ps-item--done')).toHaveCount(3);
   await expect(page.locator('#module-1')).not.toHaveClass(/locked/);
+});
+
+test('certificate prints the profile-set learner name', async ({ page }) => {
+  await reachPassedCertificate(page, 'Jordan Rivera');
+
+  await page.locator('#download-cert').click();
+  await expect(page.locator('#cert-name')).toHaveText('Jordan Rivera');
+  await expect(page.locator('#cert-score')).toHaveText('100%');
+  const stored = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? '{}'), DP_STATE_KEY);
+  expect(stored.certificate.issued).toBe(true);
+});
+
+test('certificate falls back to "Learner" when no profile name is set', async ({ page }) => {
+  await reachPassedCertificate(page); // no userName seeded, and not signed in
+
+  await page.locator('#download-cert').click();
+  await expect(page.locator('#cert-name')).toHaveText('Learner');
+});
+
+test('the badge PNG download is non-empty and decodes to real, non-blank gradient pixels', async ({ page }) => {
+  await reachPassedCertificate(page, 'Jordan Rivera');
+
+  const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#download-badge').click()]);
+
+  expect(download.suggestedFilename()).toBe('FinanceFirst_Badge_Dark-Pattern-Spotter.png');
+  const path = await download.path();
+  expect(path).not.toBeNull();
+
+  const fs = await import('node:fs/promises');
+  const bytes = await fs.readFile(path!);
+  expect(bytes.length).toBeGreaterThan(0);
+
+  // Decode the real pixel data (verifies the `xmlns`-on-<svg> fix actually
+  // renders the gradient — a broken/unfilled export would decode to either
+  // a fully transparent PNG or throw during decode).
+  const png = PNG.sync.read(bytes);
+  expect(png.width).toBeGreaterThan(0);
+  expect(png.height).toBeGreaterThan(0);
+
+  let nonWhiteOpaquePixels = 0;
+  for (let i = 0; i < png.data.length; i += 4) {
+    const [r, g, b, a] = [png.data[i]!, png.data[i + 1]!, png.data[i + 2]!, png.data[i + 3]!];
+    if (a > 0 && (r < 250 || g < 250 || b < 250)) nonWhiteOpaquePixels++;
+  }
+  // The badge's gradient (#3F6AFF -> #22D1B2 -> #FFD166) plus the dark
+  // checkmark stroke should fill a substantial share of the 512x512 canvas
+  // beyond the white background rect — a blank/broken export would leave
+  // this at (or near) zero.
+  expect(nonWhiteOpaquePixels).toBeGreaterThan(1000);
 });

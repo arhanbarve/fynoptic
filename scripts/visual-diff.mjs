@@ -76,7 +76,15 @@ async function scrollFullPage(page) {
     }
     window.scrollTo(0, 0);
   });
-  await page.waitForTimeout(500);
+  // 1.5s, not 500ms: on the heaviest, tallest pages (courseone's ~11,000px
+  // React island, dozens of effects/observers still settling after
+  // `networkidle`), 500ms wasn't always enough for the `position: sticky`
+  // header to fully re-settle at scrollTop 0 before the mask/screenshot
+  // step below — Chromium would occasionally bake a stale mid-scroll
+  // "stuck" paint of the header into the full-page capture as a ghost
+  // duplicate partway down the page. Reproduced and confirmed fixed by this
+  // longer wait during Phase 10f's course-one conversion.
+  await page.waitForTimeout(1500);
 }
 
 // The homepage hero's rotating word and the partner logo marquee both
@@ -127,6 +135,11 @@ async function maskAnimatedRegions(page) {
     mask(document.querySelector('#hero-heading'));
     // Partner logo marquee (index.html only).
     mask(document.querySelector('.logo-track'));
+
+    // Force a synchronous reflow so the header's position:static override
+    // above is fully committed to layout before the next paint, instead of
+    // possibly still being in-flight when the screenshot below fires.
+    void document.body.offsetHeight;
   });
 }
 
