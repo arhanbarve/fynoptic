@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
-import { initialsFrom } from '@/lib/auth';
+import { ensureAuthReady, initialsFrom } from '@/lib/auth';
 import { openAuthDialog } from '@/lib/auth-dialog';
 import type { Theme } from '@/lib/storage';
 import { setTheme } from '@/lib/storage';
@@ -79,6 +79,19 @@ export function Nav() {
   const signedIn = status === 'in' && !!user;
   const photoURL = signedIn ? (user?.photoURL ?? null) : null;
   const showAvatarImg = !!photoURL && !avatarFailed;
+
+  // Phase 11: this is now the sole caller that kicks off ensureAuthReady()
+  // on page load (it used to be initAuthWatcher(), called unconditionally
+  // from Base.astro's DOMContentLoaded handler, now deleted). Nav renders on
+  // every page via `<Nav client:load />`, so this preserves the same "runs
+  // once per page load" timing. ensureAuthReady() is idempotent and cached,
+  // so AuthDialog.tsx's own await of it before every submit is unaffected —
+  // it just resolves immediately once this has already settled. authStore
+  // itself no longer needs a kickoff: its onAuthStateChanged subscription
+  // (src/lib/auth.ts) now starts at module scope.
+  useEffect(() => {
+    void ensureAuthReady();
+  }, []);
 
   // A photoURL that failed to load shouldn't stay "failed" forever — reset
   // when the user (or their photo) actually changes.

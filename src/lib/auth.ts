@@ -134,9 +134,9 @@ export function logout(): Promise<void> {
 // module. Now it's an idempotent, lazily-invoked function instead: the setup
 // body runs at most once per page load (guarded by authReadyPromise); every
 // call — concurrent or later — gets that same promise. Not auto-invoked here.
-// Phase 5 calls it from a client effect; today `initAuthWatcher()` calls it as
-// a compatibility shim (see comment there) since auth-ui.ts's `onAuthReady()`
-// still expects the old auto-fire-on-import behavior.
+// Nav.tsx kicks it off from a mount effect (it's on every page via
+// `<Nav client:load />`); AuthDialog.tsx also awaits it before every submit,
+// which is a no-op await once the cached promise above has already settled.
 let authReadyPromise: Promise<void> | null = null;
 
 export function ensureAuthReady(): Promise<void> {
@@ -164,8 +164,8 @@ export function ensureAuthReady(): Promise<void> {
 
 // Initials from a display name, else the local part of the email. Two
 // characters max.
-// Exported (Phase 5) so Nav.tsx can reproduce initAuthWatcher's rendering
-// via useAuth() instead of duplicating this logic.
+// Exported (Phase 5) so Nav.tsx and Profile.tsx can render this off
+// useAuth() without duplicating the logic.
 export function initialsFrom(user: User | null): string {
   const base = (user?.displayName || user?.email || '').trim();
   if (!base) return '?';
@@ -178,44 +178,29 @@ export function initialsFrom(user: User | null): string {
     .toUpperCase();
 }
 
-// Phase 4: state substrate for a future React consumer (Phase 5's Nav.tsx).
-// Fed by its own onAuthStateChanged subscription — deliberately independent
-// of the DOM-manipulating one that used to live in initAuthWatcher() below
-// and the second one on /profile (src/islands/profile.ts).
+// Phase 4: state substrate for React consumers (Nav.tsx, Profile.tsx via
+// useAuth()). Fed by a single onAuthStateChanged subscription, started here
+// at module scope instead of behind an explicit init call — this module is
+// never imported by an SSR'd component (see the emulator guard above and I5
+// in the implementation plan), so there's no window/document hazard in
+// starting it eagerly, and every consumer needs it live from the moment they
+// mount. Phase 11 folded in what used to be a separate initAuthStore(),
+// itself only ever invoked by the now-deleted initAuthWatcher(); Nav.tsx
+// calls ensureAuthReady() from its own mount effect to replace the other
+// half of what that function did (see ensureAuthReady's doc comment).
+//
+// Replaces two things that used to run alongside this: a second
+// onAuthStateChanged subscription in initAuthWatcher() that wrote #user-btn's
+// DOM directly (Nav.tsx renders that button itself off useAuth() now), and
+// an 'avatar-updated' window event profile.ts dispatched for the same
+// button — Phase 10c's ProfileSettings.tsx pushes a saved user straight into
+// authStore instead (see its save handler), so there's no gap between an
+// in-place updateProfile() call and the nav reflecting it.
 export const authStore = createStore<{ user: User | null; status: 'loading' | 'in' | 'out' }>({
   user: null,
   status: 'loading',
 });
 
-function initAuthStore(): void {
-  onAuthStateChanged(auth, (user) => {
-    authStore.set({ user, status: user ? 'in' : 'out' });
-  });
-}
-
-// Phase 5: this used to also run a second onAuthStateChanged subscription
-// that wrote #user-btn's DOM directly (data-modal-open, aria-label, onclick,
-// #nav-avatar/#nav-initials) plus an 'avatar-updated' listener for the same
-// button. Nav.tsx now renders that button itself off useAuth() (which reads
-// authStore below), so a plain `.onclick =` assignment on that React-owned
-// node would just get clobbered — both retired. What's left here is only the
-// auth bootstrapping every consumer of authStore still needs.
-//
-// The 'avatar-updated' event (dispatched by the still-vanilla profile.ts
-// after a photo change) has no listener anymore. That's a known, temporary
-// gap: authStore only updates on a real onAuthStateChanged firing (sign-in/
-// out/token refresh), not on an in-place updateProfile() call, so the nav
-// won't reflect a same-session avatar/name change until Phase 10c converts
-// Profile.tsx to push the new user into authStore directly.
-export function initAuthWatcher(): void {
-  // Compatibility shim: ensureAuthReady() used to run unconditionally at
-  // module import as an async IIFE. Now that it's an explicit call, something
-  // has to trigger it so auth-ui.ts's 'auth-ready' listener (registered at
-  // its own import time, before this runs) still fires instead of timing out
-  // after 8s. initAuthWatcher() is already the first of the two calls Base.astro
-  // makes off this module, so it's the least-disruptive place for it until
-  // Phase 5 moves the call into a client effect. Fire-and-forget: failures are
-  // already logged inside ensureAuthReady().
-  void ensureAuthReady();
-  initAuthStore();
-}
+onAuthStateChanged(auth, (user) => {
+  authStore.set({ user, status: user ? 'in' : 'out' });
+});

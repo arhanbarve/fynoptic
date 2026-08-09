@@ -106,20 +106,19 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
     //     the flashcard/practice/index/about fixit/report/writer stubs. See
     //     the comment atop lib/modal.ts for how it now steps aside for
     //     Radix-owned (login/signup/reset) modals instead of fighting them.
-    //   - initAuthWatcher(): boots ensureAuthReady() + the onAuthStateChanged
-    //     subscription authStore needs. Nothing else calls this — Nav and
-    //     AuthDialog both read authStore via useAuth()/its store directly,
-    //     they don't set it up.
     // initTheme() is gone: the pre-paint script in <head> plus useTheme()
     // (via Nav's theme button) now cover every case that used to need it.
+    //
+    // Phase 11: initAuthWatcher() is deleted. Its two jobs — kicking off
+    // ensureAuthReady(), and starting the onAuthStateChanged subscription
+    // authStore needs — moved to Nav.tsx's mount effect and to
+    // src/lib/auth.ts's module scope, respectively. See both files.
     import { initModals } from '../lib/modal';
-    import { initAuthWatcher } from '../lib/auth';
     import { applyA11y } from '../lib/a11y';
 
     document.addEventListener('DOMContentLoaded', () => {
       applyA11y();
       initModals();
-      initAuthWatcher();
     });
   </script>
 </body>
