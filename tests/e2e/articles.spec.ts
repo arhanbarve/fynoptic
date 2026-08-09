@@ -77,12 +77,16 @@ test.describe('sorting', () => {
 });
 
 test('load more reveals 12 additional cards and focuses the first new one', async ({ page }) => {
-  const initiallyVisible = await page.locator('.article-card:not([hidden])').count();
-  expect(initiallyVisible).toBe(12);
+  // ArticlesBrowser is a client:load React island — on a cold server start,
+  // hydration (which pages the SSR'd grid down to 12 via `hidden`) can take
+  // slightly longer than a page.goto() to settle. Poll for the visible count
+  // to actually reach 12 rather than asserting immediately, so this doesn't
+  // flake while all 244 SSR'd cards are still unhidden.
+  const visibleCards = page.locator('.article-card:not([hidden])');
+  await expect(visibleCards).toHaveCount(12);
 
   await page.locator('#load-more').click();
-  const afterLoadMore = await page.locator('.article-card:not([hidden])').count();
-  expect(afterLoadMore).toBe(24);
+  await expect(visibleCards).toHaveCount(24);
 
   const focused = await page.evaluate(() => document.activeElement?.getAttribute('data-title'));
   const thirteenthCardTitle = await page.locator('.article-card:not([hidden])').nth(12).getAttribute('data-title');
