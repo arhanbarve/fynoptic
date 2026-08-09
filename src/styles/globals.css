@@ -15,6 +15,20 @@
 @source "../components/**/*.{tsx,jsx,astro}";
 @source "../pages/**/*.astro";
 
+/* Tailwind's stock `dark:` variant is `@media (prefers-color-scheme: dark)` —
+   the OS setting. Fynoptic's theme is `data-theme` on <html>/<body>, written by
+   the pre-paint script in Base.astro and by Nav.tsx's toggle. Those two signals
+   are independent, and on a dark-OS machine they disagree the moment the user
+   picks light: every `dark:` utility on the site was resolving against the OS
+   while its non-prefixed sibling resolved against the theme.
+
+   The visible symptom was the hero's outline button: `hover:text-accent-
+   foreground` (theme-driven) paired with `dark:hover:bg-input/50` (OS-driven)
+   produced near-black-on-near-black at ~1.1:1 in dark and white-on-white at
+   1.0:1 in light. Rebinding the variant to the attribute the site actually
+   uses fixes that class of bug everywhere, not just on that one button. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme inline {
   /* Reuse the site's existing design tokens (legacy.css / redesign.css)
      instead of introducing a second, competing color system. */

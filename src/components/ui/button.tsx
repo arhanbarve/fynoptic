@@ -12,8 +12,14 @@ const buttonVariants = cva(
         default: "bg-primary text-primary-foreground hover:bg-primary/90",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
+        // `dark:hover:bg-input/50` used to sit at the end of this string and
+        // won the background on hover, while the text still came from
+        // `hover:text-accent-foreground` — a fill and an ink from two
+        // different sources, which resolved to ~1.1:1 in dark and 1.0:1 in
+        // light. Hover is now one pair (accent fill, accent ink) in both
+        // themes; only the resting surface differs.
         outline:
-          "border bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:

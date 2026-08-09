@@ -25,17 +25,28 @@ async function hydrateTrack(page: Page) {
  * Sets scroll position to a given fraction (0..1) of the pinned track's
  * scrollable range, mirroring RackFocus's own `useTrackProgress` /
  * `scrollToItem` math: progress = (scrollY - pinStartDoc) / (trackHeight -
- * viewportHeight), so scrollY = pinStartDoc + fraction * (trackHeight - vh).
+ * pinnedHeight), so scrollY = pinStartDoc + fraction * (trackHeight - pinH).
+ *
+ * The denominator used to be `trackHeight - viewportHeight`, matching what
+ * the component did at the time. That was the bug: the pinned block is
+ * shorter than the viewport (it starts below the fixed header), so dividing
+ * by the viewport made progress saturate before the track released and left
+ * dead scroll at the bottom of the section. The component now divides by the
+ * distance the pinned block can actually travel, and this helper follows it —
+ * measured off the sticky element rather than hardcoded, so it can't drift
+ * from the component's own sizing again.
  */
 async function scrollToTrackFraction(page: Page, fraction: number) {
   await page.evaluate((f) => {
     const track = document.querySelector('[data-rack-track]') as HTMLElement | null;
     if (!track) return;
+    const pin = track.firstElementChild as HTMLElement | null;
     const raw = getComputedStyle(document.documentElement).getPropertyValue('--header-h');
     const headerH = parseFloat(raw) || 56;
     const rect = track.getBoundingClientRect();
     const pinStartDoc = window.scrollY + rect.top - headerH;
-    const denom = Math.max(1, track.offsetHeight - window.innerHeight);
+    const pinH = pin?.offsetHeight ?? window.innerHeight;
+    const denom = Math.max(1, track.offsetHeight - pinH);
     window.scrollTo(0, pinStartDoc + f * denom);
   }, fraction);
   // rAF-throttled progress update (useTrackProgress) plus one paint.

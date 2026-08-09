@@ -13,7 +13,14 @@ const body = bodies[`../../articles/${id}.html`];
 if (typeof body !== 'string') throw new Error(`missing article body for id: ${id}`);
 ---
 <Base title={`${title} • Fynoptic`} description={title} canonical={`/articles/${id}`}>
-  <article class="container">
+  <!--
+    `article-page` is what tells the design layer this .reader-body is a page,
+    not the old modal reader. legacy.css caps .reader-body at 72vh with its own
+    scrollbar — correct inside a dialog, wrong here, where it turned the article
+    into a scrollbox floating in a page that didn't scroll. The class scopes the
+    release so the modal rules keep working for anything still using them.
+  -->
+  <article class="container article-page">
     <h1 class="reader-title">{title}</h1>
     <div class="reader-body" set:html={body} />
   </article>

@@ -208,6 +208,48 @@ export function ArticlesBrowser(): null {
     };
   }, []);
 
+  // The read set is captured once, in the mount effect above, and frozen into
+  // each entry's `wasRead`. That was wrong for the most common way it changes:
+  // you open an article (its ReadMarker writes the id) and press Back. The
+  // browser restores this page from the back-forward cache — resumed, not
+  // re-mounted — so the mount effect never runs again and the badge stayed off
+  // until a full reload, which is exactly the "you have to exit and come back
+  // twice" report.
+  //
+  // `pageshow` fires on both a fresh load and a bfcache restore, so it's the
+  // one event that covers the case. `visibilitychange` covers opening an
+  // article in a new tab and switching back; `storage` covers a second tab
+  // marking something read while this one is open. All three funnel into the
+  // same re-read, and setEntries bails out when nothing actually changed so a
+  // tab switch doesn't churn the 244-card DOM sync effect below.
+  useEffect(() => {
+    const sync = (): void => {
+      const readIds = new Set(getArticlesRead());
+      setEntries((prev) => {
+        let changed = false;
+        const next = prev.map((e) => {
+          const wasRead = readIds.has(e.articleId);
+          if (wasRead === e.wasRead) return e;
+          changed = true;
+          return { ...e, wasRead };
+        });
+        return changed ? next : prev;
+      });
+    };
+    const onPageShow = (): void => sync();
+    const onVisibility = (): void => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    window.addEventListener('pageshow', onPageShow);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
   // Collapse-on-stick (spec §2.3): `.controls` is `position: sticky` (see
   // redesign.css). #controls-sentinel is a zero-height marker articles.astro
   // renders immediately above it. When the sentinel scrolls past the sticky
