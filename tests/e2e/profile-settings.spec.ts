@@ -53,7 +53,7 @@ async function signUpFromHome(page: Page, email: string): Promise<void> {
   await page.locator('#signup-password').fill(PASSWORD);
   await page.locator('#signup-confirm').fill(PASSWORD);
   await page.locator('#signup-submit').click();
-  await expect(page.locator('#signup-modal')).toBeHidden();
+  await expect(page.locator('#auth-modal')).toBeHidden();
 }
 
 // Real Firebase Auth emulator REST API (not mocked): every pending

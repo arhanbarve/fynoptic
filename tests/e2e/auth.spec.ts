@@ -22,7 +22,7 @@ async function signUp(page: Page, email: string): Promise<void> {
   await page.locator('#signup-password').fill(PASSWORD);
   await page.locator('#signup-confirm').fill(PASSWORD);
   await page.locator('#signup-submit').click();
-  await expect(page.locator('#signup-modal')).toBeHidden();
+  await expect(page.locator('#auth-modal')).toBeHidden();
 }
 
 // Both #user-btn's onclick ('/profile') and #logout-btn's handler
@@ -61,9 +61,10 @@ test.describe('sign up, sign in, sign out', () => {
     await expect(userBtn).toHaveAttribute('data-modal-open', 'login-modal');
 
     await userBtn.click();
-    await expect(page.locator('#login-modal')).toBeVisible();
+    await expect(page.locator('#auth-modal')).toBeVisible();
+    await expect(page.locator('#auth-tab-login')).toHaveAttribute('aria-selected', 'true');
     await page.getByRole('button', { name: 'Create an account' }).click();
-    await expect(page.locator('#signup-modal')).toBeVisible();
+    await expect(page.locator('#auth-tab-signup')).toHaveAttribute('aria-selected', 'true');
 
     await page.locator('#signup-email').fill(email);
     await page.locator('#signup-password').fill(PASSWORD);
@@ -71,7 +72,7 @@ test.describe('sign up, sign in, sign out', () => {
     await page.locator('#signup-submit').click();
 
     await expect(page.locator('.toast-container .toast')).toHaveText('Account created!');
-    await expect(page.locator('#signup-modal')).toBeHidden();
+    await expect(page.locator('#auth-modal')).toBeHidden();
 
     await expect(userBtn).not.toHaveAttribute('data-modal-open', /.*/);
     await expect(userBtn).toHaveAttribute('aria-label', 'Your Profile');
@@ -98,13 +99,14 @@ test.describe('sign up, sign in, sign out', () => {
     await signOut(page);
 
     await page.locator('#user-btn').click();
-    await expect(page.locator('#login-modal')).toBeVisible();
+    await expect(page.locator('#auth-modal')).toBeVisible();
+    await expect(page.locator('#auth-tab-login')).toHaveAttribute('aria-selected', 'true');
     await page.locator('#login-email').fill(email);
     await page.locator('#login-password').fill(PASSWORD);
     await page.locator('#login-submit').click();
 
     await expect(page.locator('.toast-container .toast')).toHaveText('Signed in!');
-    await expect(page.locator('#login-modal')).toBeHidden();
+    await expect(page.locator('#auth-modal')).toBeHidden();
     await expect(page.locator('#nav-initials')).toBeVisible();
   });
 });
@@ -138,6 +140,83 @@ test.describe('error surfaces', () => {
     await expect(page.locator('.toast-container .toast')).toHaveText('Password reset link sent. Check your inbox.');
     await expect(page.locator('#reset-modal')).toBeHidden();
     await expect(page.locator('#reset-error')).toBeHidden();
+  });
+});
+
+test.describe('auth dialog tabs (commit 6 merge: #login-modal/#signup-modal -> #auth-modal)', () => {
+  test('switching tabs swaps the visible panel and moves aria-selected', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#user-btn').click();
+
+    await expect(page.locator('#auth-tab-login')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#auth-tab-signup')).toHaveAttribute('aria-selected', 'false');
+    await expect(page.locator('#auth-panel-login')).toBeVisible();
+    await expect(page.locator('#auth-panel-signup')).toBeHidden();
+
+    await page.locator('#auth-tab-signup').click();
+
+    await expect(page.locator('#auth-tab-signup')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#auth-tab-login')).toHaveAttribute('aria-selected', 'false');
+    await expect(page.locator('#auth-panel-signup')).toBeVisible();
+    await expect(page.locator('#auth-panel-login')).toBeHidden();
+  });
+
+  test('switching tabs clears a displayed error', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#user-btn').click();
+
+    // Client-side validation only — no network/emulator round trip needed
+    // to produce this error.
+    await page.locator('#login-submit').click();
+    await expect(page.locator('#login-error')).toBeVisible();
+    await expect(page.locator('#login-error')).toHaveText('Please enter your email and password.');
+
+    await page.locator('#auth-tab-signup').click();
+    await page.locator('#auth-tab-login').click();
+
+    await expect(page.locator('#login-error')).toBeHidden();
+  });
+
+  test('the password show/hide toggle flips input[type] between password and text', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#user-btn').click();
+
+    const passwordInput = page.locator('#login-password');
+    const toggle = page.getByRole('button', { name: 'Show password' });
+
+    await expect(passwordInput).toHaveAttribute('type', 'password');
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    await toggle.click();
+    await expect(passwordInput).toHaveAttribute('type', 'text');
+    await expect(page.getByRole('button', { name: 'Hide password' })).toHaveAttribute('aria-pressed', 'true');
+
+    await page.getByRole('button', { name: 'Hide password' }).click();
+    await expect(passwordInput).toHaveAttribute('type', 'password');
+    await expect(page.getByRole('button', { name: 'Show password' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('#login-submit and #signup-submit are horizontally centred within .dialog (AC-6.4)', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('#user-btn').click();
+
+    const dialog = page.locator('#auth-modal .dialog');
+
+    const dialogBox1 = await dialog.boundingBox();
+    const loginSubmitBox = await page.locator('#login-submit').boundingBox();
+    if (!dialogBox1 || !loginSubmitBox) throw new Error('missing bounding box');
+    const dialogCenter1 = dialogBox1.x + dialogBox1.width / 2;
+    const loginCenter = loginSubmitBox.x + loginSubmitBox.width / 2;
+    expect(Math.abs(dialogCenter1 - loginCenter)).toBeLessThanOrEqual(2);
+
+    await page.locator('#auth-tab-signup').click();
+
+    const dialogBox2 = await dialog.boundingBox();
+    const signupSubmitBox = await page.locator('#signup-submit').boundingBox();
+    if (!dialogBox2 || !signupSubmitBox) throw new Error('missing bounding box');
+    const dialogCenter2 = dialogBox2.x + dialogBox2.width / 2;
+    const signupCenter = signupSubmitBox.x + signupSubmitBox.width / 2;
+    expect(Math.abs(dialogCenter2 - signupCenter)).toBeLessThanOrEqual(2);
   });
 });
 
@@ -181,6 +260,6 @@ test.describe('submit locking', () => {
     // aria-busy — in the DOM), so #login-submit itself is gone by now, not
     // just un-busied. Asserting the modal is closed is the stronger, still-
     // accurate check.
-    await expect(page.locator('#login-modal')).toBeHidden();
+    await expect(page.locator('#auth-modal')).toBeHidden();
   });
 });

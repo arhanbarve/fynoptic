@@ -913,3 +913,190 @@ html body .course-card--soon:hover .soon-hint  { opacity: 1; transform: translat
 @media (prefers-reduced-motion: reduce) {
   html body .soon-hint { transition: none !important; }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Commit 6 — Auth dialog: merged login/signup tabs, centred submit       */
+/* Spec: docs/superpowers/plans/2026-08-09-design-fixes-spec.md §5        */
+/* ---------------------------------------------------------------------- */
+
+/* 5.1/5.2 — #login-modal/#signup-modal merge into one #auth-modal
+   (AuthDialog.tsx). legacy.css's width/scroll rules were keyed to the old
+   ids and no longer match #auth-modal — this is its own sizing, a genuine
+   visual redesign rather than a like-for-like port of those numbers (see
+   §5.5). #reset-modal is untouched and keeps legacy's rules unchanged. */
+html body #auth-modal .dialog {
+  position: relative; /* legacy.css positioned .modal-close off this on the old
+    #login-modal/#signup-modal .dialog rules; without it here, the × pins to
+    the viewport corner (.modal is position:fixed) instead of the card. */
+  width: min(92vw, 440px);
+  max-width: 92vw;
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+  padding: 28px 26px 24px;
+  background: var(--surface-1);
+  border-radius: 14px;
+}
+
+/* Header: mark + title + subtitle, centred. Modal's `hideTitle` keeps
+   Radix's required Dialog.Title as the (sr-only) accessible name; the
+   markup below is the dialog's own visible heading. */
+html body #auth-modal .auth-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  margin-bottom: 18px;
+}
+html body #auth-modal .auth-mark {
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border-radius: 8px;
+  background: var(--db-plate);
+  object-fit: contain;
+}
+html body #auth-modal .auth-title {
+  margin: 4px 0 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-100);
+}
+html body #auth-modal .auth-subtitle {
+  margin: 0;
+  font-size: .85rem;
+  color: var(--text-300);
+}
+
+/* Tabs: segmented control. AuthDialog.tsx uses a roving tabindex, so Tab
+   lands once on whichever button is aria-selected; Left/Right move focus
+   between the pair and activate the one it lands on. */
+html body #auth-modal .auth-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface-2);
+  border-radius: 9px;
+  margin-bottom: 16px;
+}
+html body #auth-modal .auth-tabs [role="tab"] {
+  flex: 1;
+  appearance: none;
+  padding: 8px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-300);
+  font: inherit;
+  font-weight: 600;
+  font-size: .88rem;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+html body #auth-modal .auth-tabs [role="tab"][aria-selected="true"] {
+  background: var(--surface-0);
+  color: var(--text-100);
+}
+html body #auth-modal .auth-tabs [role="tab"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--db-optic) 22%, transparent);
+}
+
+/* Google: promoted above the divider, full width (was after the form
+   fields, auto width). */
+html body #auth-modal .auth-google {
+  width: 100%;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* legacy.css's .divider::before/::after are each 40% wide, leaving a 20%
+   gap sized for the old two-letter "or" — "or use your email" is wider
+   than that gap, so the rule lines ran straight through the words. Narrow
+   the lines (scoped to this dialog only — other .divider users elsewhere
+   still get the unmodified 40%/40%). */
+html body #auth-modal .divider::before,
+html body #auth-modal .divider::after {
+  width: 22%;
+}
+
+/* Inputs: 40px tall, 7px radius, leading icon, focus-visible ring. */
+html body #auth-modal .auth-field { margin-bottom: 14px; }
+html body #auth-modal .auth-field label {
+  display: block;
+  margin-bottom: 6px;
+}
+html body #auth-modal .auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: var(--text-300);
+}
+html body #auth-modal .auth-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  pointer-events: none;
+}
+html body #auth-modal .auth-input-wrap input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px 0 36px;
+  border-radius: 7px;
+  box-sizing: border-box;
+}
+html body #auth-modal .auth-input-wrap input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--db-optic) 22%, transparent);
+}
+html body #auth-modal .auth-toggle-visibility {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-300);
+  border-radius: 6px;
+  cursor: pointer;
+}
+html body #auth-modal .auth-toggle-visibility:hover { color: var(--text-100); }
+html body #auth-modal .auth-toggle-visibility:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--db-optic) 22%, transparent);
+}
+html body #auth-modal .auth-toggle-visibility[aria-pressed="true"] { color: var(--db-optic); }
+
+/* Error: bordered alert row with icon. Text, id, role and aria-live are
+   unchanged (AuthDialog.tsx) — this is presentation only. The explicit
+   [hidden] rule matters: without it, this selector's specificity (an id
+   ancestor) would beat legacy.css's bare `.form-error[hidden]` and the
+   empty alert box would render even while hidden. */
+html body #auth-modal .auth-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in oklab, var(--danger-400) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--danger-400) 10%, transparent);
+  color: var(--danger-400);
+}
+html body #auth-modal .auth-error[hidden] { display: none; }
+html body #auth-modal .auth-error svg { flex: none; margin-top: 2px; }
+
+/* Submit: centred, auto width with 34px horizontal padding — was
+   full-width (the flex-column form stretches children by default;
+   align-self opts this one button out). This is AC-6.4: called out twice
+   in review as the one visual regression to guard against. */
+html body #auth-modal .auth-submit {
+  align-self: center;
+  width: auto;
+  padding-inline: 34px;
+}
