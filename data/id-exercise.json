@@ -7,6 +7,78 @@
         "answer_index": 1,
         "countermove": "Use keyboard to pick the correct control; capture before/after; verify in settings.",
         "rationale": "Visual weight and label shifts steer choice."
+      },
+      {
+        "id": "id2",
+        "vignette": "At checkout, a $4.99 “protection plan” checkbox is already ticked and sits below the fold; the visible total only reflects it once you scroll to review your order.",
+        "options": ["Sneaking","Nagging","Misdirection","Obstruction"],
+        "answer_index": 0,
+        "countermove": "Uncheck the add-on, screenshot the cart before and after, and proceed only once the total reflects your intent.",
+        "rationale": "Cost was added without clear disclosure — a pre-checked default hidden from the visible total."
+      },
+      {
+        "id": "id3",
+        "vignette": "To finish creating an account, one checkbox both agrees to the terms of service and opts you into marketing emails and a data-sharing partnership — there is no way to accept the terms without the rest.",
+        "options": ["Confirmshaming","Forced action","Sneaking","Nagging"],
+        "answer_index": 1,
+        "countermove": "Complete signup, then immediately open the privacy/communications settings to opt out, capturing a before/after screenshot as proof.",
+        "rationale": "Two unrelated consents are bundled into one required action, so agreeing to the necessary thing also agrees to something you didn't choose."
+      },
+      {
+        "id": "id4",
+        "vignette": "Trying to close a discount pop-up, the only way out is a link reading “No thanks, I like paying full price” — there is no plain close button.",
+        "options": ["Nagging","Social proofing","Confirmshaming","Misdirection"],
+        "answer_index": 2,
+        "countermove": "Dismiss via the browser's own close control, or click through — the guilt wording carries no legal weight either way.",
+        "rationale": "The decline option is worded to shame you into the merchant's preferred choice rather than stating a neutral option."
+      },
+      {
+        "id": "id5",
+        "vignette": "Every time you dismiss the “Upgrade to Pro” modal, it reappears on your next click inside the app, with no permanent “don't show again” option anywhere.",
+        "options": ["Nagging","Obstruction","Sneaking","Interface interference"],
+        "answer_index": 0,
+        "countermove": "Check account settings for a notification/upsell toggle; if none exists, note the missing opt-out as its own evidence line in your audit.",
+        "rationale": "Repeated prompting after a clear decline is nagging — friction by repetition rather than by wording or layout."
+      },
+      {
+        "id": "id6",
+        "vignette": "A product page shows “23 people bought this in the last hour” next to a countdown timer that resets to 10:00 every time the page is refreshed.",
+        "options": ["Misdirection","Social proofing","Forced action","Confirmshaming"],
+        "answer_index": 1,
+        "countermove": "Ignore the timer and counter — they carry no real deadline — and re-check price and availability on a fresh session before deciding.",
+        "rationale": "Manufactured urgency and consensus signals are designed to rush a decision, not to convey real scarcity."
+      },
+      {
+        "id": "id7",
+        "vignette": "A bright animated “limited-time bonus” banner fills most of the screen while the actual plan-comparison table — the one showing the cheaper option — sits collapsed under a small “compare plans” link most visitors never click.",
+        "options": ["Sneaking","Nagging","Misdirection","Social proofing"],
+        "answer_index": 2,
+        "countermove": "Look for the plan-comparison or full-details link before deciding, and screenshot the comparison table you actually chose from.",
+        "rationale": "Attention is pulled toward flashy secondary content while the real comparison is visually buried, not mislabeled."
+      },
+      {
+        "id": "id8",
+        "vignette": "The signup flow takes one click; cancellation is phone-only, available weekdays 9–5, and the recorded message repeats “please chat with us to continue” before offering any cancel option.",
+        "options": ["Obstruction","Confirmshaming","Forced action","Misdirection"],
+        "answer_index": 0,
+        "countermove": "Call once during the required hours, state a clear dated cancellation request, get a reference number, and send a same-day follow-up email documenting the call.",
+        "rationale": "Friction is added specifically to the exit path — narrow hours and a single high-friction channel — while entry stayed effortless."
+      },
+      {
+        "id": "id9",
+        "vignette": "A “free for 30 days” trial requires a card upfront; on day 31 it silently converts to a $39.99/month plan, and the charge only ever appears as a line item on the card statement — no reminder email is sent.",
+        "options": ["Nagging","Sneaking","Social proofing","Interface interference"],
+        "answer_index": 1,
+        "countermove": "Use a throwaway email and calendar a reminder before the trial ends, or refuse card-up-front trials entirely; if charged, your calendar note plus the original offer screenshot supports a refund request.",
+        "rationale": "The cost and its timing are never disclosed at the moment that matters — Sneaking's cost-without-disclosure pattern, applied to renewal instead of checkout."
+      },
+      {
+        "id": "id10",
+        "vignette": "Claiming a “free” trial requires agreeing to a single checkbox that also enrolls you in a partner newsletter and waives your right to a jury trial — none of which can be unchecked separately.",
+        "options": ["Sneaking","Obstruction","Forced action","Confirmshaming"],
+        "answer_index": 2,
+        "countermove": "Accept only if you're willing to opt out afterward; immediately locate the newsletter/communications setting and opt out, capturing a before/after screenshot as proof.",
+        "rationale": "Multiple unrelated consents are locked together behind one required action — the defining trait of forced-action bundling."
       }
     ]
   }
