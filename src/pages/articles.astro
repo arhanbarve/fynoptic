@@ -29,8 +29,19 @@ const cards = ARTICLE_META.map((a) => {
   <section class="articles-hero container">
     <h1>Articles & Guides</h1>
     <p>Clear, student-friendly explainers to help you spot junk fees, avoid dark patterns, and act with confidence.</p>
+  </section>
 
-    <!-- Controls -->
+  <!-- Zero-height marker: ArticlesBrowser.tsx watches this with an
+       IntersectionObserver to know when .controls has hit the sticky
+       offset, so it can add data-stuck="true" for the collapse-on-stick
+       styling. Must stay immediately before .controls. -->
+  <div id="controls-sentinel" aria-hidden="true"></div>
+
+  <!-- Grid -->
+  <section class="container" aria-label="Article results">
+    <!-- Controls: lives inside this section (not .articles-hero) so its
+         sticky containing block spans the full grid instead of ending
+         where the hero ends. See design-fixes-spec.md §2.1. -->
     <div class="controls">
       <div class="controls-row">
         <div class="search-wrap" role="search" aria-label="Search articles">
@@ -60,10 +71,7 @@ const cards = ARTICLE_META.map((a) => {
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Grid -->
-  <section class="container" aria-label="Article results">
     <div id="articles-grid" class="articles-grid">
       {cards.map((a) => (
         <a

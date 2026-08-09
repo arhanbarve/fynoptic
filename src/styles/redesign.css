@@ -814,3 +814,52 @@ html body .header .user-icon[data-modal-open] {
   font-weight: 600;
   color: var(--header-fg);
 }
+
+/* ============================================================================
+   ARTICLES PAGE — sticky containing block, offsets, gaps, collapse
+   Commit 3. See docs/superpowers/plans/2026-08-09-design-fixes-spec.md §2.
+   ========================================================================== */
+
+/* legacy.css:1653 asks for min(7vh,5rem) of top padding here and never gets it:
+   `.articles-hero` is also `.container`, and legacy.css:5825 redeclares
+   `.container { padding: 0 var(--gutter) }` as a SHORTHAND 4,172 lines later,
+   which resets padding-block to 0 at equal specificity. Result was a heading
+   flush against the nav bar. Longhand + the redesign layer's precedence so the
+   same collision cannot recur. Bottom padding is smaller than legacy's because
+   `.controls` no longer lives inside this section (see 2.1). */
+html body .articles-hero {
+  padding-block: clamp(2rem, 4.5vh, 3rem) 1.5rem !important;
+}
+
+/* legacy.css:1669 declares `.controls { position: sticky; top: calc(64px + 8px) }`.
+   articles.astro used to nest .controls inside .articles-hero, so its
+   containing block ended right where .controls ended — a zero-length sticky
+   range, meaning .controls just scrolled away with the hero instead of
+   sticking. Fixed structurally by moving .controls into the results section
+   (containing block now spans all 244 cards). This rule fixes the other half:
+   the hardcoded `64px` offset no longer matches the real (58px) header, so it
+   reads off --header-h instead and can't drift out of sync again. */
+html body .controls {
+  top: calc(var(--header-h) + 8px) !important;
+  margin-bottom: 24px; /* gap to #articles-grid; was 0px */
+}
+
+/* Collapse-on-stick: ArticlesBrowser.tsx toggles data-stuck="true" on
+   .controls via an IntersectionObserver on #controls-sentinel once the bar
+   has actually started sticking. Padding/shadow only — both compositor-cheap
+   and neither triggers a reflow of the 244-card grid. */
+html body .controls[data-stuck="true"] {
+  padding: .45rem .6rem;
+  box-shadow: 0 8px 24px rgba(var(--shadow-rgb), .3);
+  transition: padding .18s ease, box-shadow .18s ease;
+}
+html body .controls[data-stuck="true"] .search-wrap { padding: .38rem .65rem; }
+html body .controls[data-stuck="true"] .sort select,
+html body .controls[data-stuck="true"] .chip { padding-block: .3rem; }
+
+/* The sitewide `* { animation: none !important }` reduced-motion rule
+   (redesign.css:368) does not cover CSS transitions, so the collapse
+   above needs its own opt-out. */
+@media (prefers-reduced-motion: reduce) {
+  html body .controls { transition: none !important; }
+}

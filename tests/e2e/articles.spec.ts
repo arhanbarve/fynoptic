@@ -109,3 +109,37 @@ test('arrow keys move focus between visible cards', async ({ page }) => {
   await page.keyboard.press('ArrowUp');
   await expect(first).toBeFocused();
 });
+
+// AC-2.1/2.6 regression guard: .controls used to be nested inside
+// .articles-hero, whose containing block ended exactly where .controls
+// ended — a zero-length sticky range, so .controls just scrolled away with
+// the hero instead of sticking under the header. Confirmed at scrollY=1200:
+// .controls.top was -856px. .controls now lives in the results section
+// instead, whose containing block spans all 244 cards.
+test('.controls never scrolls above the header (stays stuck under it)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => window.scrollTo(0, 1200));
+
+  const controlsTop = await page.locator('.controls').evaluate((el) => el.getBoundingClientRect().top);
+  const headerBottom = await page.locator('.header').evaluate((el) => el.getBoundingClientRect().bottom);
+
+  expect(controlsTop).toBeGreaterThanOrEqual(headerBottom);
+});
+
+// AC-2.6: legacy.css's intended top padding on .articles-hero was being
+// zeroed out by a later `.container { padding: 0 var(--gutter) }` shorthand
+// at equal specificity, leaving the h1 flush against the header (0px gap).
+// Asserted at 1440x900 in both themes.
+test('gap between the header and the Articles & Guides heading is at least 32px in both themes', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  const headerBottom = await page.locator('.header').evaluate((el) => el.getBoundingClientRect().bottom);
+  const headingTop = await page.locator('.articles-hero h1').evaluate((el) => el.getBoundingClientRect().top);
+  expect(headingTop - headerBottom).toBeGreaterThanOrEqual(32);
+
+  await page.locator('#theme-btn').click();
+
+  const headerBottomLight = await page.locator('.header').evaluate((el) => el.getBoundingClientRect().bottom);
+  const headingTopLight = await page.locator('.articles-hero h1').evaluate((el) => el.getBoundingClientRect().top);
+  expect(headingTopLight - headerBottomLight).toBeGreaterThanOrEqual(32);
+});

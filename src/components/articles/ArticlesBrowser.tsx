@@ -208,6 +208,40 @@ export function ArticlesBrowser(): null {
     };
   }, []);
 
+  // Collapse-on-stick (spec §2.3): `.controls` is `position: sticky` (see
+  // redesign.css). #controls-sentinel is a zero-height marker articles.astro
+  // renders immediately above it. When the sentinel scrolls past the sticky
+  // offset, `.controls` has started sticking, so flip data-stuck="true" for
+  // the CSS collapse transition; remove it once the sentinel is back in
+  // view. rootMargin mirrors `.controls`'s own `top` (--header-h + 8px),
+  // read from computed style rather than hardcoded so this can't drift from
+  // the CSS if --header-h ever changes again.
+  useEffect(() => {
+    const sentinel = document.getElementById('controls-sentinel');
+    const controls = document.querySelector<HTMLElement>('.controls');
+    if (!sentinel || !controls) return;
+
+    const headerH =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-h')) || 0;
+    const offset = headerH + 8;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        if (entry.isIntersecting) {
+          controls.removeAttribute('data-stuck');
+        } else {
+          controls.setAttribute('data-stuck', 'true');
+        }
+      },
+      { rootMargin: `-${offset}px 0px 0px 0px`, threshold: 0 },
+    );
+    observer.observe(sentinel);
+
+    return () => observer.disconnect();
+  }, []);
+
   // Single filter+sort pass, shared by the DOM sync effect and the
   // search-tracking effect below.
   const matching = useMemo(() => {
