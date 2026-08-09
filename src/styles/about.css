@@ -11,3 +11,25 @@
    second, so anything added here wins over styles.css. Do not copy rules
    out of styles.css into this file — duplicated cascading rules are what
    made these styles hard to reason about in the first place. */
+
+.partner-cell {
+  background: var(--db-plate);
+  border-color: var(--db-rule);
+}
+.partner-cell img { opacity: 1; filter: none; }
+
+.founders-slab,
+.partners-slab {
+  background: none;
+  border-top: 1px solid var(--db-rule);
+  border-bottom: 1px solid var(--db-rule);
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+}
+
+.founders-slab .slab-title,
+.partners-slab .slab-title {
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
+  line-height: 1.15;
+  letter-spacing: -.018em;
+  margin: 0 0 1rem;
+}
