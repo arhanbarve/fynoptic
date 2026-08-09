@@ -12,3 +12,93 @@
    second, so anything added here wins over styles.css. Do not copy rules
    out of styles.css into this file — duplicated cascading rules are what
    made these styles hard to reason about in the first place. */
+
+/* Commit 7 (design-fixes spec §6.3): step 1's unit picker as a table
+   instead of wrapped chips. Three legacy rules fight over `.unit-list`
+   (legacy.css:3481, :5078, :5206), all `display:flex; flex-wrap:wrap` —
+   won here with the `.is-table` co-class the container also carries,
+   rather than stacking more `!important` onto the bare selector. */
+.unit-list.is-table {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  gap: 7px !important;
+}
+.unit-list.is-table .unit-chip {
+  display: grid;
+  grid-template-columns: 22px 1fr 84px 1fr 34px;
+  gap: 12px;
+  align-items: center;
+  text-align: left !important; /* undoes the inline centring that used to live at FlashcardWizard.tsx:129 */
+  padding: 9px 13px;
+  border-left: 3px solid var(--unit-hue);
+  border-radius: 8px !important; /* legacy.css:5213 makes .unit-chip a 999px pill, wrong for a table row */
+  background: color-mix(in oklab, var(--unit-hue) 9%, var(--surface-1));
+  transform: none !important; /* kills legacy.css:5220's hover lift — wrong for a row */
+}
+.unit-list.is-table .unit-box {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--unit-hue);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1;
+}
+/* Checkmark is generated content, not a text node — see the JSX comment on
+   why (keeps .unit-chip's textContent() to just the unit name). */
+.unit-list.is-table .unit-box::after {
+  content: '';
+}
+.unit-list.is-table .unit-chip.is-active .unit-box::after {
+  content: '\2713'; /* ✓ */
+}
+.unit-list.is-table .unit-name {
+  min-width: 0;
+  white-space: normal;
+}
+/* Count and percent are also generated content, sourced from data-*
+   attributes — same textContent constraint as the checkmark above. */
+.unit-list.is-table .unit-count {
+  color: var(--text-70, inherit);
+  font-size: 0.85em;
+}
+.unit-list.is-table .unit-count::after {
+  content: attr(data-count);
+}
+.unit-list.is-table .unit-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--tint-rgb, 148, 163, 184), 0.15);
+  overflow: hidden;
+}
+.unit-list.is-table .unit-fill {
+  display: block;
+  height: 100%;
+  background: var(--unit-hue);
+}
+.unit-list.is-table .unit-pct {
+  text-align: right;
+  font-size: 0.85em;
+  color: var(--text-70, inherit);
+}
+.unit-list.is-table .unit-pct::after {
+  content: attr(data-pct);
+}
+.unit-total {
+  margin: 0.5rem 0 0;
+  font-size: 0.85em;
+  color: var(--text-70, inherit);
+}
+@media (max-width: 640px) {
+  .unit-list.is-table .unit-chip {
+    grid-template-columns: 22px 1fr 68px;
+  }
+  .unit-list.is-table .unit-bar,
+  .unit-list.is-table .unit-pct {
+    display: none;
+  }
+}

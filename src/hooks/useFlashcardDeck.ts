@@ -139,6 +139,33 @@ export function checkFitbAnswer(rawInput: string, target: string): boolean {
 }
 
 /**
+ * New for the unit-picker table (commit 7, design-fixes spec §6.1): per-unit
+ * mastery for step 1's progress bar/percentage. Counts answer keys prefixed
+ * `"<unit>::"` — `done` is every attempted key, `correct` is the subset
+ * graded correct — against `cards.length` (that unit's own card count, not
+ * the whole deck). `pct` is `round(correct/total*100)`, 0 when the unit has
+ * no cards. Pure: takes the stored answers map and a card list, computes
+ * nothing else, touches no storage.
+ */
+export function unitProgress(
+  answers: Record<string, AnswerRecord>,
+  unit: string,
+  cards: Flashcard[],
+): { done: number; correct: number; total: number; pct: number } {
+  const prefix = `${unit}::`;
+  let done = 0;
+  let correct = 0;
+  for (const [id, a] of Object.entries(answers)) {
+    if (!id.startsWith(prefix)) continue;
+    done++;
+    if (a.correct) correct++;
+  }
+  const total = cards.length;
+  const pct = total ? Math.round((correct / total) * 100) : 0;
+  return { done, correct, total, pct };
+}
+
+/**
  * flashcard.ts:690-705, unchanged. Set-backed: duplicate candidate values
  * collapse, so fewer than 4 options is possible. The correct value is
  * always included first, before the Set can be capped.

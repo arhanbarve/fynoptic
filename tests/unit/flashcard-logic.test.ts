@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeck, buildMcOptions, checkFitbAnswer } from '../../src/hooks/useFlashcardDeck';
+import { buildDeck, buildMcOptions, checkFitbAnswer, unitProgress } from '../../src/hooks/useFlashcardDeck';
+import type { AnswerRecord } from '../../src/hooks/useFlashcardDeck';
 import type { Flashcard } from '../../src/types';
 
 // Phase 10e extracted buildDeck/checkFitbAnswer/buildMcOptions out of
@@ -116,5 +117,53 @@ describe('multiple-choice distractors', () => {
     const options = buildMcOptions(card, pool, true);
     expect(options).not.toContain('');
     expect(options.sort()).toEqual(['Alpha', 'Beta']);
+  });
+});
+
+describe('unitProgress (commit 7 — unit-picker table mastery)', () => {
+  const cards: Flashcard[] = [
+    { term: 'Alpha', definition: 'first' },
+    { term: 'Beta', definition: 'second' },
+    { term: 'Gamma', definition: 'third' },
+    { term: 'Delta', definition: 'fourth' },
+  ];
+  const record = (correct: boolean): AnswerRecord => ({ correct, attempts: 1, lastAt: 0 });
+
+  it('counts only keys prefixed with this unit, ignoring other units', () => {
+    const answers: Record<string, AnswerRecord> = {
+      'Unit_A::Alpha': record(true),
+      'Unit_A::Beta': record(false),
+      'Unit_B::Alpha': record(true),
+    };
+    const result = unitProgress(answers, 'Unit_A', cards);
+    expect(result.done).toBe(2);
+    expect(result.correct).toBe(1);
+    expect(result.total).toBe(4);
+  });
+
+  it('pct is round(correct/total*100) against the unit\'s own card count', () => {
+    const answers: Record<string, AnswerRecord> = {
+      'Unit_A::Alpha': record(true),
+      'Unit_A::Beta': record(true),
+      'Unit_A::Gamma': record(true),
+    };
+    // 3/4 correct = 75%
+    expect(unitProgress(answers, 'Unit_A', cards).pct).toBe(75);
+  });
+
+  it('pct is 0 for a unit with no answers yet', () => {
+    expect(unitProgress({}, 'Unit_A', cards)).toEqual({ done: 0, correct: 0, total: 4, pct: 0 });
+  });
+
+  it('pct is 0 (not NaN) for a unit with zero cards', () => {
+    expect(unitProgress({}, 'Empty', [])).toEqual({ done: 0, correct: 0, total: 0, pct: 0 });
+  });
+
+  it('a unit name that is a prefix of another unit name does not leak into its count (the "::" separator matters)', () => {
+    const answers: Record<string, AnswerRecord> = {
+      'Unit::Alpha': record(true),
+      'Unit_Extended::Alpha': record(true),
+    };
+    expect(unitProgress(answers, 'Unit', cards).done).toBe(1);
   });
 });

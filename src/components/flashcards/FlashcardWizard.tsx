@@ -26,10 +26,46 @@
 // same pattern Practice.tsx already established for PracticeWizard, so the
 // guard's precondition can never occur.
 import { useEffect, useRef, useState } from 'react';
+import { FLASHCARD_UNITS } from '../../data/flashcard-units';
+import { unitProgress, type AnswerRecord } from '../../hooks/useFlashcardDeck';
 import { showToast } from '../../lib/toast';
 
 export type Mode = 'mc' | 'fitb';
 type WizardStep = 1 | 2 | 3;
+
+// Same localStorage key as useFlashcardDeck.ts's STORAGE_KEY — read
+// directly here (not through the hook) because step 1 renders before any
+// deck/engine state exists. Read-only; the wizard never writes this key.
+const PROGRESS_STORAGE_KEY = 'fynoptic.flashcards.v1';
+
+function readStoredAnswers(): Record<string, AnswerRecord> {
+  try {
+    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as { answers?: Record<string, AnswerRecord> };
+    return parsed.answers ?? {};
+  } catch {
+    return {};
+  }
+}
+
+// Identity-only hues (design-fixes spec §6.4) — never carry progress
+// meaning on their own (WCAG 1.4.1); the bar/percentage do that.
+const UNIT_HUES: Record<string, string> = {
+  Banking: '#5B8CFF',
+  'Financial Decisions': '#8B5CF6',
+  'Making the Most of Your Income': '#06B6D4',
+  'Spending & Saving Plan': '#10B981',
+  'Saving Goals and Future': '#84CC16',
+  'Building Your Credit History': '#EAB308',
+  'Borrowing Basics': '#F97316',
+  'Credit Cards': '#EF4444',
+  'Protecting Your Money and Identity': '#EC4899',
+  'Buying a Car': '#A855F7',
+  'Paying for College': '#14B8A6',
+  'Investing Basics': '#6366F1',
+};
+const DEFAULT_HUE = '#5B8CFF';
 
 export interface FlashcardWizardProps {
   /** All unit names, in display order — flashcard-units.ts's keys. */
@@ -57,6 +93,13 @@ export function FlashcardWizard({
   const [step, setStep] = useState<WizardStep>(1);
   const [flipClass, setFlipClass] = useState<'' | 'flip-out' | 'flip-in'>('');
   const isInitialRender = useRef(true);
+  // Starts empty (matches SSR, avoids a hydration mismatch) and is filled
+  // in from localStorage after mount — see readStoredAnswers above.
+  const [answers, setAnswers] = useState<Record<string, AnswerRecord>>({});
+
+  useEffect(() => {
+    setAnswers(readStoredAnswers());
+  }, []);
 
   // Mirrors flashcard.ts's setStepHiddenState transition: 220ms flip-out,
   // then flip-in for 420ms, on every step change after the first render.
@@ -114,31 +157,55 @@ export function FlashcardWizard({
         {/* STEP 1: Units */}
         <div className="fc-block" id="block-units" hidden={step !== 1} aria-hidden={step !== 1}>
           <h3 className="fc-label">Units</h3>
-          <div id="unit-list" className="unit-list" aria-live="polite">
+          <div id="unit-list" className="unit-list is-table" aria-live="polite">
             {allUnits.map((unit) => {
               const checked = unitsSelected.has(unit);
+              const cards = FLASHCARD_UNITS[unit] ?? [];
+              const progress = unitProgress(answers, unit, cards);
+              const hue = UNIT_HUES[unit] ?? DEFAULT_HUE;
+              // The checkmark/count/percent are CSS-generated content (::after,
+              // driven by data-* attributes and the .is-active class below),
+              // not literal child text — flashcards.spec.ts's
+              // selectFirstUnitAndStart() captures `chip.textContent()` right
+              // after clicking a chip (so it's already `.is-active`) and
+              // later asserts the session summary contains that exact
+              // string; textContent only ever sees real DOM text nodes, so
+              // any of these added as plain text here would inflate that
+              // capture past the plain unit name and break that pre-existing,
+              // unrelated-to-this-commit assertion. The unit name stays a
+              // real text node (unchanged from before this commit); an
+              // aria-label on the checkbox carries the full description
+              // (name, count, mastery) to assistive tech since the CSS
+              // content the sighted-only decorations use is not reliably
+              // exposed there.
               return (
                 <label
                   key={unit}
                   className={checked ? 'chip unit-chip is-active' : 'chip unit-chip'}
-                  // legacy.css never sets text-align on .unit-chip — the
-                  // original markup was a <button>, which centers its label
-                  // text via the UA stylesheet for free. A <label> has no
-                  // such default, so it's restored explicitly here rather
-                  // than by adding a new rule to legacy.css for one caller.
-                  style={{ textAlign: 'center' }}
+                  style={{ '--unit-hue': hue } as React.CSSProperties}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleUnit(unit)}
                     className="sr-only"
+                    aria-label={`${unit}, ${cards.length} cards, ${progress.pct}% mastered`}
                   />
-                  {unit}
+                  <span className="unit-box" aria-hidden="true" />
+                  <span className="unit-name">{unit}</span>
+                  <span className="unit-count" aria-hidden="true" data-count={`${cards.length} cards`} />
+                  <span className="unit-bar" aria-hidden="true">
+                    <span className="unit-fill" style={{ width: `${progress.pct}%` }} />
+                  </span>
+                  <span className="unit-pct" aria-hidden="true" data-pct={`${progress.pct}%`} />
                 </label>
               );
             })}
           </div>
+          <p className="unit-total">
+            {unitsSelected.size} unit{unitsSelected.size === 1 ? '' : 's'} ·{' '}
+            {allUnits.reduce((sum, u) => (unitsSelected.has(u) ? sum + (FLASHCARD_UNITS[u]?.length ?? 0) : sum), 0)} cards
+          </p>
           <div className="fc-actions">
             <button id="select-all" className="btn btn-ghost" type="button" onClick={selectAll}>
               Select All
