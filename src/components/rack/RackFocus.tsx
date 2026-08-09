@@ -293,16 +293,19 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
       data-rack-track=""
       className="relative"
       style={{
-        // pinH = viewport - header height; step = pinH * 0.92; track spans
-        // pinH + step * (items.length - 1) — one step per rack transition.
-        height: `calc((100vh - var(--header-h, 56px)) + (100vh - var(--header-h, 56px)) * 0.92 * ${segments})`,
+        // pinH = 68vh; step = pinH * 0.72; track spans pinH + step * segments
+        // — one step per rack transition. 0.72 (not the originally-spec'd 0.38)
+        // is what actually lands the track at ~2.14 screens of scroll per
+        // AC-4.1; 0.38 was a spec math error (68*(1+3*0.38)/100 = 1.46 screens,
+        // still outside the 2.0-2.3 AC range even though shorter than before).
+        height: `calc(68vh + 68vh * 0.72 * ${segments})`,
       }}
     >
       <div
         className="sticky flex gap-8 overflow-hidden px-4 sm:px-6 lg:px-0"
         style={{
           top: 'var(--header-h, 56px)',
-          height: 'calc(100vh - var(--header-h, 56px))',
+          height: '68vh',
           paddingTop: 'clamp(16px, 2vw, 26px)',
           willChange: near ? 'contents' : undefined,
         }}
@@ -493,7 +496,7 @@ export function RackFocus() {
   const items = useMemo(() => RACK_ITEMS, []);
 
   return (
-    <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:px-8" aria-labelledby="rack-heading">
+    <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8" aria-labelledby="rack-heading">
       {/* Lead sits OUTSIDE the pin — only the grid below pins. An earlier
           prototype pass pinned this along with the grid and overflowed on
           short viewports. */}
