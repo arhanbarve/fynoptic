@@ -863,3 +863,53 @@ html body .controls[data-stuck="true"] .chip { padding-block: .3rem; }
 @media (prefers-reduced-motion: reduce) {
   html body .controls { transition: none !important; }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Commit 4 — Courses page: row gap, centred lock text, padlock hover     */
+/* Spec: docs/superpowers/plans/2026-08-09-design-fixes-spec.md §3        */
+/* ---------------------------------------------------------------------- */
+
+/* 3.1 Row gap between the two sibling .courses-grid rows (confirmed bug:
+   legacy.css's .courses-grid { gap: 1.5rem } only applies within a single
+   grid, never between two adjacent grids). Adjacent-sibling selector so it
+   stays correct if a third row is ever added. */
+html body .courses-grid + .courses-grid { margin-top: 2rem; }
+
+/* 3.2 Lock text centring (confirmed bug: legacy.css's
+   .course-card--soon .soon-mask sets display:grid + place-items:center,
+   which centres the box but never sets text-align, so the two-line string
+   wraps and left-aligns). Restructure to a flex column and centre the text. */
+html body .course-card--soon .soon-mask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 14px;
+}
+
+/* 3.3 Padlock hover-reveal animation */
+html body .soon-lock { width: 26px; height: 26px; transition: transform .3s ease; }
+html body .soon-hint {
+  font-size: .68rem; font-weight: 500; letter-spacing: .02em; text-transform: none;
+  color: var(--text-300);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .28s ease, transform .28s ease;
+}
+html body .course-card--soon:hover .soon-lock  { animation: soon-shake .5s ease; }
+html body .course-card--soon:hover .soon-hint  { opacity: 1; transform: translateY(0); }
+
+@keyframes soon-shake {
+  0%,100% { transform: rotate(0) }   18% { transform: rotate(-9deg) }
+  38% { transform: rotate(8deg) }    58% { transform: rotate(-5deg) }
+  78% { transform: rotate(3deg) }
+}
+
+/* The global `@media (prefers-reduced-motion: reduce) { * { animation: none !important } }`
+   rule (redesign.css ~line 352) already suppresses the shake keyframe animation above.
+   It does NOT cover CSS transitions, so .soon-hint's opacity/transform transition needs
+   its own explicit opt-out here. */
+@media (prefers-reduced-motion: reduce) {
+  html body .soon-hint { transition: none !important; }
+}
