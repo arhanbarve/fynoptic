@@ -23,10 +23,10 @@ export function PartnerStrip() {
   return (
     <div className="partners reveal-up delay-3">
       <div className="partners-head">
-        <span className="partners-kicker">In partnership with</span>
+        <span className="partners-kicker">In Partnership With</span>
       </div>
 
-      <div className="logo-ticker" role="region" aria-label="Partner organizations">
+      <div className="logo-ticker" role="region" aria-label="Partner Organizations">
         <div className="logo-track">
           <div className="logo-card">
             <img src="/assets/img/invesco.webp" alt="Invesco" />

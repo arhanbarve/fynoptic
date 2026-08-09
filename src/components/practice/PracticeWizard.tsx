@@ -158,11 +158,11 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
 
             <div id="adapt-every-field" className="pc-field">
               <label className="pc-label" htmlFor="adapt-every">
-                Adapt every
+                Adapt Every
               </label>
               <select
                 id="adapt-every"
-                aria-label="Adapt every"
+                aria-label="Adapt Every"
                 disabled={!adaptive}
                 value={adaptWindow}
                 onChange={(e) => setAdaptWindow(Number(e.target.value))}
@@ -202,7 +202,7 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
 
       {step === 2 && (
         <section id="step-2" className="wizard-panel" aria-label="Step 2: Choose units">
-          <h2 className="topics-title center">Choose Units</h2>
+          <h2 className="topics-title center">Choose units</h2>
 
           <div id="topics-scroller" className="topics-scroller">
             <div id="topics-list" className="topics-list" aria-label="Topics" role="group">
@@ -231,7 +231,7 @@ export function PracticeWizard({ bank, categories, hasSession, onComplete }: Pra
 
           <div className="topics-actions center">
             <button id="topics-select-all" className="btn btn-ghost" type="button" onClick={selectAllTopics}>
-              Select all
+              Select All
             </button>
             <button id="topics-clear" className="btn btn-ghost" type="button" onClick={clearAllTopics}>
               Clear

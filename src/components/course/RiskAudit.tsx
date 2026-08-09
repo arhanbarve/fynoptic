@@ -180,7 +180,7 @@ export function RiskAudit({ onSubmit }: RiskAuditProps) {
       </div>
       <div id="audit-actions" className="gate" hidden={!actionsVisible}>
         <button id="copy-audit" className="btn btn-ghost" type="button" onClick={handleCopy}>
-          Copy summary
+          Copy Summary
         </button>
       </div>
     </div>

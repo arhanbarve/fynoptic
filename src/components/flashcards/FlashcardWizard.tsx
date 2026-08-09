@@ -141,7 +141,7 @@ export function FlashcardWizard({
           </div>
           <div className="fc-actions">
             <button id="select-all" className="btn btn-ghost" type="button" onClick={selectAll}>
-              Select all
+              Select All
             </button>
             <button id="clear-all" className="btn btn-ghost" type="button" onClick={clearAll}>
               Clear

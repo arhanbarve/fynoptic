@@ -248,7 +248,7 @@ function ArticleCard({
           aria-disabled={!scrolledToEnd}
           onClick={handleMarkRead}
         >
-          Mark article as read
+          Mark Article as Read
         </button>
         {content.showArticleLocknote && <span className="locknote">Article must be loaded and scrolled.</span>}
       </div>
@@ -353,7 +353,7 @@ function ScriptDrills({ onDrillsChecked }: { onDrillsChecked?: () => void }) {
         {checklist}
       </div>
       <button id="drills-check" className="btn btn-ghost mt-05" type="button" onClick={handleCheck}>
-        Check for essentials
+        Check for Essentials
       </button>
     </div>
   );
@@ -367,7 +367,7 @@ function TranscriptCard({ video }: { video: VideoContent }) {
     <div className="transcript content-card mt-1">
       <h3>{video.transcriptHeading}</h3>
       <details>
-        <summary>View transcript</summary>
+        <summary>View Transcript</summary>
         <div className="md mt-05">
           {video.transcriptParagraphs.map((p, i) => (
             <p key={i}>{p}</p>

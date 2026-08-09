@@ -21,6 +21,10 @@ public/CNAME
 # alongside them are small and tracked.
 tests/baseline/*.png
 
+# Diff-artifact screenshots written by `node scripts/visual-diff.mjs --diff`
+# when a page exceeds the pixel threshold — regenerable, never commit these.
+tests/visual-diff/
+
 # Claude Code session state and its git worktrees — never commit these.
 .claude/
 .vercel

@@ -175,7 +175,7 @@ export function PreQuiz({ state, onAnswerChange, onSubmit }: PreQuizProps) {
 
   return (
     <>
-      <h2 id="pre-title">PRE-QUIZ — 10 items (diagnostic)</h2>
+      <h2 id="pre-title">Pre-Quiz — 10 items (diagnostic)</h2>
       <p className="subtle">Notes: low-jargon, stimulus-focused. Read time ~6–8 minutes.</p>
 
       <div id="pre-quiz-root" className="quiz-card" aria-live="polite">
@@ -217,7 +217,7 @@ export function PreQuiz({ state, onAnswerChange, onSubmit }: PreQuizProps) {
           aria-disabled={completed || !allAnswered}
           onClick={handleSubmit}
         >
-          Submit pre-quiz
+          Submit Pre-Quiz
         </button>
         <span className="locknote">Complete all 10 items to continue.</span>
       </div>

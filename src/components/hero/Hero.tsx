@@ -134,10 +134,10 @@ export function Hero() {
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Button asChild size="hero" data-track="cta_click">
-            <a href="/courses">Start the free course</a>
+            <a href="/courses">Start the Free Course</a>
           </Button>
           <Button asChild size="hero" variant="outline">
-            <a href="/practice">Try Practice mode</a>
+            <a href="/practice">Try Practice Mode</a>
           </Button>
         </div>
 

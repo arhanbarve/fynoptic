@@ -352,7 +352,7 @@ test.describe('avatar upload — mocked Storage backend (see file header)', () =
     const bar = page.locator('[role="progressbar"][aria-label="Avatar upload progress"]');
     await expect(bar).toBeVisible();
 
-    await page.getByRole('button', { name: 'Cancel upload' }).click();
+    await page.getByRole('button', { name: 'Cancel Upload' }).click();
 
     await expect(page.locator('.form-error')).toHaveText('Upload canceled.');
     await expect(bar).toBeHidden();
@@ -367,7 +367,7 @@ test.describe('verify-email button (real Auth emulator)', () => {
     await signUpFromHome(page, email);
     await page.goto('/profile');
 
-    const verifyBtn = page.getByRole('button', { name: 'Verify email' });
+    const verifyBtn = page.getByRole('button', { name: 'Verify Email' });
     await expect(verifyBtn).toBeVisible();
     await verifyBtn.click();
     await expect(page.locator('.toast-container .toast')).toHaveText('Verification email sent.');
@@ -379,7 +379,7 @@ test.describe('verify-email button (real Auth emulator)', () => {
     // subscription (a deliberate choice — see its comment) — so a fresh
     // mount is what picks the just-confirmed state up.
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Verify email' })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'Verify Email' })).toBeHidden();
     await expect(page.locator('.settings .chip-row')).toContainText('Email verified');
   });
 });

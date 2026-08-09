@@ -197,7 +197,7 @@ export function Profile() {
 
             <div className="action-row">
               <button id="logout-btn" className="btn btn-primary" onClick={handleSignOut}>
-                Sign out
+                Sign Out
               </button>
             </div>
           </div>
@@ -232,13 +232,13 @@ export function Profile() {
             </div>
           </div>
           <div className="stat card">
-            <div className="stat-label">Last sign-in</div>
+            <div className="stat-label">Last Sign-In</div>
             <div className="stat-value" id="last-login">
               {fmtDate(user.metadata.lastSignInTime)}
             </div>
           </div>
           <div className="stat card">
-            <div className="stat-label">Modules completed</div>
+            <div className="stat-label">Modules Completed</div>
             <div className="stat-value">
               <span id="mods-done">{progress.done}</span>/<span id="mods-total">{progress.total}</span>
             </div>
@@ -264,7 +264,7 @@ export function Profile() {
               <strong id="pct-text">{progress.pct}%</strong> complete
             </span>
             <a href="/courses" className="btn btn-ghost">
-              Continue learning
+              Continue Learning
             </a>
           </div>
         </section>

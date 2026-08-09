@@ -34,7 +34,7 @@ import { FlashcardCard } from './FlashcardCard';
 
 export interface FlashcardViewProps {
   engine: UseFlashcardDeckResult;
-  /** The wizard step 2 "Shuffle deck" checkbox's live `checked` state (`els.shuffleToggle?.checked`, flashcard.ts:573) — that control is owned by the wizard step, not this component, but "Restart deck" needs its current value. */
+  /** The wizard step 2 "Shuffle deck" checkbox's live `checked` state (`els.shuffleToggle?.checked`, flashcard.ts:573) — that control is owned by the wizard step, not this component, but "Restart Deck" needs its current value. */
   shuffleDeck: boolean;
   onRequestResetProgress: () => void;
   onRequestEndSession: () => void;
@@ -210,7 +210,7 @@ export function FlashcardView({ engine, shuffleDeck, onRequestResetProgress, onR
 
         <div className="fc-bottom">
           <button id="restart-btn" className="btn btn-ghost" onClick={() => engine.restart(shuffleDeck)}>
-            Restart deck
+            Restart Deck
           </button>
         </div>
       </div>

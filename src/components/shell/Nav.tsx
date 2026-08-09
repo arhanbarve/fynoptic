@@ -159,7 +159,7 @@ export function Nav() {
 
   return (
     <header className="header" role="banner">
-      <nav className="nav container" role="navigation" aria-label="Main navigation">
+      <nav className="nav container" role="navigation" aria-label="Main Navigation">
         <a href="/" className="logo" aria-label="Fynoptic Home">
           <img src="/assets/img/fynopticlogo.png" alt="Fynoptic logo" />
           <span className="logo-text">Fynoptic</span>
@@ -168,7 +168,7 @@ export function Nav() {
         <button
           id="nav-toggle"
           className="nav-toggle"
-          aria-label="Open menu"
+          aria-label="Open Menu"
           aria-controls="mobile-menu"
           aria-expanded={drawerOpen}
           onClick={() => (drawerOpen ? closeDrawer() : openDrawer())}
@@ -207,7 +207,7 @@ export function Nav() {
           <button
             id="user-btn"
             className="user-icon"
-            aria-label={signedIn ? 'Your profile' : 'Sign in'}
+            aria-label={signedIn ? 'Your Profile' : 'Sign In'}
             data-modal-open={signedIn ? undefined : 'login-modal'}
             onClick={handleUserClick}
           >
@@ -227,7 +227,7 @@ export function Nav() {
           </button>
 
           <a href="/courses" className="btn btn-primary cta-desktop" data-track="cta_click">
-            Start the free course
+            Start the Free Course
           </a>
         </div>
       </nav>
@@ -240,7 +240,7 @@ export function Nav() {
           if (e.target instanceof Element && e.target.closest('a')) closeDrawer();
         }}
       >
-        <button className="menu-close" aria-label="Close menu" onClick={closeDrawer}>
+        <button className="menu-close" aria-label="Close Menu" onClick={closeDrawer}>
           &times;
         </button>
         <ul>
@@ -251,7 +251,7 @@ export function Nav() {
           ))}
           <li>
             <a href="/courses" className="btn btn-primary" data-track="cta_click">
-              Start the free course
+              Start the Free Course
             </a>
           </li>
         </ul>

@@ -239,7 +239,7 @@ function RackPanel({ item, d, incoming }: PanelProps) {
         href={item.href}
         className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
       >
-        Explore {item.title.toLowerCase()}
+        Explore {item.title}
       </a>
     </div>
   );
@@ -325,7 +325,7 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
 
         <div
           role="group"
-          aria-label="Fynoptic — courses, articles, flashcards, practice"
+          aria-label="Fynoptic — Courses, Articles, Flashcards, Practice"
           className="flex min-w-0 flex-1 flex-col justify-center gap-2"
         >
           {items.map((item, i) => {
@@ -414,7 +414,7 @@ function RackTabs({ items }: { items: readonly RackItem[] }) {
     <div className="flex flex-col gap-4">
       <div
         role="tablist"
-        aria-label="Fynoptic — courses, articles, flashcards, practice"
+        aria-label="Fynoptic — Courses, Articles, Flashcards, Practice"
         className="flex flex-wrap gap-2"
       >
         {items.map((item, i) => {
@@ -458,7 +458,7 @@ function RackTabs({ items }: { items: readonly RackItem[] }) {
           href={active.href}
           className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          Explore {active.title.toLowerCase()}
+          Explore {active.title}
         </a>
       </div>
     </div>

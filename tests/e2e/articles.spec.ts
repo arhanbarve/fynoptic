@@ -30,7 +30,7 @@ test('search filters the grid and debounces (result count updates once typing se
   expect(`${title} ${blurb}`.toLowerCase()).toContain('overdraft');
 });
 
-test('an empty search shows the empty state and Clear search resets it', async ({ page }) => {
+test('an empty search shows the empty state and Clear Search resets it', async ({ page }) => {
   await page.locator('#search-input').fill('zzzznonexistentquery');
   await page.waitForTimeout(300);
   await expect(page.locator('#empty-state')).toBeVisible();
@@ -43,11 +43,11 @@ test('an empty search shows the empty state and Clear search resets it', async (
 
 test.describe('sorting', () => {
   const cases: { value: string; label: string }[] = [
-    { value: 'featured', label: 'Featured order' },
+    { value: 'featured', label: 'Featured Order' },
     { value: 'az', label: 'Title A–Z' },
     { value: 'za', label: 'Title Z–A' },
-    { value: 'short', label: 'Shortest read' },
-    { value: 'long', label: 'Longest read' },
+    { value: 'short', label: 'Shortest Read' },
+    { value: 'long', label: 'Longest Read' },
   ];
 
   for (const { value } of cases) {

@@ -259,7 +259,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
 
   return (
     <section className="settings card" aria-labelledby="settings-heading">
-      <h2 id="settings-heading">Edit profile</h2>
+      <h2 id="settings-heading">Edit Profile</h2>
       <form className="settings-form" onSubmit={handleSubmit}>
         <div className="avatar-wrap">
           {avatarSrc ? (
@@ -327,7 +327,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
               <div className="progress-fill" style={{ '--p': `${uploadProgress}%` } as CSSProperties} />
             </div>
             <button type="button" className="btn btn-ghost" onClick={handleCancelUpload}>
-              Cancel upload
+              Cancel Upload
             </button>
           </div>
         )}
@@ -343,13 +343,13 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
 
         {!emailVerified && (
           <button type="button" className="btn btn-ghost" onClick={handleVerifyClick} disabled={verifying}>
-            {verifying ? 'Sending…' : 'Verify email'}
+            {verifying ? 'Sending…' : 'Verify Email'}
           </button>
         )}
 
         <div className="settings-actions">
           <button type="submit" id="settings-submit" className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save profile'}
+            {saving ? 'Saving…' : 'Save Profile'}
           </button>
         </div>
       </form>

@@ -25,37 +25,37 @@ const TICKET_ROWS: readonly TicketRow[] = [
   },
   {
     id: 'service-fee',
-    label: 'Service fee',
+    label: 'Service Fee',
     amount: '$9.60',
     note: 'A percentage of the price, charged per ticket, for no nameable service.',
   },
   {
     id: 'processing-fee',
-    label: 'Order processing fee',
+    label: 'Order Processing Fee',
     amount: '$4.99',
     note: 'Charged per order, not per ticket — it vanishes from any per-ticket comparison.',
   },
   {
     id: 'facility-charge',
-    label: 'Facility charge',
+    label: 'Facility Charge',
     amount: '$6.00',
     note: 'Paid to the venue, collected by the seller, and shown only once you reach checkout.',
   },
   {
     id: 'delivery',
-    label: 'Delivery — mobile ticket',
+    label: 'Delivery — Mobile Ticket',
     amount: '$2.50',
     note: 'A delivery fee for a barcode. Nothing is printed or shipped.',
   },
   {
     id: 'sales-tax',
-    label: 'Sales tax',
+    label: 'Sales Tax',
     amount: '$2.87',
     note: "The only line actually set by law — and it's calculated on the fees too.",
   },
   {
     id: 'total',
-    label: 'Total charged',
+    label: 'Total Charged',
     amount: '$109.96',
     note: '$25.96 over the advertised price.',
     isTotal: true,
@@ -149,7 +149,7 @@ export function Ticket({ scrollProgress, reducedMotion }: TicketProps) {
         <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground [font-family:var(--mono-face)]">
           Checkout
         </span>
-        <div className="flex items-center gap-1" role="group" aria-label="Row focus mode">
+        <div className="flex items-center gap-1" role="group" aria-label="Row Focus Mode">
           <button
             type="button"
             onClick={() => setFocusMode('scan')}
@@ -177,14 +177,14 @@ export function Ticket({ scrollProgress, reducedMotion }: TicketProps) {
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            All sharp
+            All Sharp
           </button>
         </div>
       </div>
 
       <div
         role="tablist"
-        aria-label="Ticket fee breakdown"
+        aria-label="Ticket Fee Breakdown"
         aria-orientation="vertical"
         className="divide-y divide-border"
       >

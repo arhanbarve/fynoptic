@@ -151,7 +151,7 @@ export function IdExercise({ locked, onComplete }: IdExerciseProps) {
       </div>
       <div className="gate">
         <button id="id-ex-submit" className="btn btn-primary" aria-disabled={submitDisabled} disabled={submitDisabled} onClick={handleSubmit}>
-          Finish exercise
+          Finish Exercise
         </button>
         <span className="locknote">Answer all items (instant feedback shown).</span>
       </div>

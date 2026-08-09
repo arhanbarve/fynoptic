@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 // The shadcn Button (`asChild`) merges `data-slot="button"` onto the
 // rendered <a> (see src/components/ui/button.tsx + the legacy.css commit
 // that keys off this same attribute). The homepage header nav also has an
-// `<a href="/courses">Start the free course</a>` (desktop AND mobile menu
+// `<a href="/courses">Start the Free Course</a>` (desktop AND mobile menu
 // copies, in src/components/shell/Nav.tsx), so `a[href="/courses"]` alone is
 // ambiguous in strict mode. Scoping to `[data-slot="button"]` selects only
 // the hero's shadcn-rendered CTA.
@@ -28,8 +28,8 @@ test.describe('homepage hero', () => {
       page.locator('section.hero [class*="pill"], section.hero [class*="badge"]'),
     ).toHaveCount(0);
 
-    const primaryCta = page.locator(PRIMARY_CTA_SELECTOR, { hasText: 'Start the free course' });
-    const secondaryCta = page.locator('a[href="/practice"]', { hasText: 'Try Practice mode' });
+    const primaryCta = page.locator(PRIMARY_CTA_SELECTOR, { hasText: 'Start the Free Course' });
+    const secondaryCta = page.locator('a[href="/practice"]', { hasText: 'Try Practice Mode' });
     await expect(primaryCta).toBeVisible();
     await expect(secondaryCta).toBeVisible();
   });
@@ -193,7 +193,7 @@ test.describe('homepage hero', () => {
 
   test('CTA buttons have no gradient background', async ({ page }) => {
     await page.goto('/');
-    const primaryCta = page.locator(PRIMARY_CTA_SELECTOR, { hasText: 'Start the free course' });
+    const primaryCta = page.locator(PRIMARY_CTA_SELECTOR, { hasText: 'Start the Free Course' });
     const backgroundImage = await primaryCta.evaluate((el) => getComputedStyle(el).backgroundImage);
     expect(backgroundImage).toBe('none');
   });

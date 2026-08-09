@@ -110,7 +110,7 @@ export function PostQuiz({ state, locked, onAnswerChange, onSubmit, onRetake }: 
 
   return (
     <>
-      <h2 id="post-title">POST-QUIZ — scenario-rich assessment</h2>
+      <h2 id="post-title">Post-Quiz — scenario-rich assessment</h2>
       <p className="subtle">Notes: each item tests judgment, sequencing, or evidence quality; explanations shown after submit.</p>
 
       <div id="post-quiz-root" className="quiz-card" aria-live="polite">
@@ -145,11 +145,11 @@ export function PostQuiz({ state, locked, onAnswerChange, onSubmit, onRetake }: 
       </div>
       <div className="gate">
         <button className="btn btn-primary" id="post-submit" aria-disabled={!allAnswered} disabled={!allAnswered} onClick={handleSubmit}>
-          Submit assessment
+          Submit Assessment
         </button>
         {showRetake && (
           <button className="btn btn-ghost" id="post-retake" onClick={handleRetake}>
-            Retake assessment
+            Retake Assessment
           </button>
         )}
         <span className="locknote">Score ≥ 80% to unlock certificate.</span>

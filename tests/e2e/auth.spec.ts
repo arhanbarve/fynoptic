@@ -74,7 +74,7 @@ test.describe('sign up, sign in, sign out', () => {
     await expect(page.locator('#signup-modal')).toBeHidden();
 
     await expect(userBtn).not.toHaveAttribute('data-modal-open', /.*/);
-    await expect(userBtn).toHaveAttribute('aria-label', 'Your profile');
+    await expect(userBtn).toHaveAttribute('aria-label', 'Your Profile');
     await expect(page.locator('#nav-initials')).toBeVisible();
   });
 
