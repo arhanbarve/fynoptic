@@ -35,29 +35,30 @@ import {
 
 import { createStore } from './store';
 
-// Back to false: turning it on broke Google sign-in with
-// `Error 400: redirect_uri_mismatch`, and the reason is a prerequisite the
-// previous commit missed.
+// authDomain is fynoptic.org, served by the `/__/auth/:path*` rewrite in
+// vercel.json. Two prerequisites, both now satisfied — and the second one is
+// the one that bit us:
 //
-// Firebase derives the Google OAuth redirect URI from authDomain:
-// `https://<authDomain>/__/auth/handler`. It auto-registers that URI in the
-// project's OAuth client for its OWN firebaseapp.com domain, and only that
-// one. Point authDomain at a custom domain and the popup starts asking Google
-// for `https://fynoptic.org/__/auth/handler`, which isn't on the client's
-// Authorized redirect URIs — so Google rejects the request before the consent
-// screen renders. Serving the helper page at that path (the vercel.json
-// rewrite, still in place and still returning 200) is necessary but not
-// sufficient; the URI has to be whitelisted too.
+//   1. fynoptic.org under Firebase Console -> Authentication -> Settings ->
+//      Authorized domains. Was already there.
+//   2. https://fynoptic.org/__/auth/handler under the project's Web OAuth
+//      client -> Authorized redirect URIs, in Google Cloud Console. Firebase
+//      derives the redirect URI from authDomain and auto-registers it for its
+//      OWN firebaseapp.com domain only, never for a custom one. 87e13a0 set
+//      this flag without that, so the popup asked Google for a URI nobody had
+//      whitelisted and every sign-in died with
+//      `Error 400: redirect_uri_mismatch`. Reverted in 6897c29.
 //
-// To turn this back on, in order:
-//   1. Google Cloud Console -> APIs & Services -> Credentials -> the Web
-//      OAuth client for this project -> Authorized redirect URIs -> add
-//      https://fynoptic.org/__/auth/handler  (keep the existing
-//      firebaseapp.com one; removing it strands the fallback below)
-//   2. Wait for it to propagate, then confirm Google sign-in works
-//   3. Flip this to true and deploy
-// Do not reorder those. Step 3 before step 1 is exactly what broke it.
-const USE_CUSTOM_AUTH_DOMAIN = false;
+// A 200 from /__/auth/handler does NOT prove sign-in works — that was the
+// mistaken check the first time. The real check drives the popup and reads
+// what Google returns; done against a local build before this landed, and
+// Google rendered "Sign in to continue to fynoptic.org".
+//
+// If sign-in ever breaks with redirect_uri_mismatch again, set this to false
+// and redeploy. That falls back to the firebaseapp.com domain, whose redirect
+// URI is still registered — which is why FIREBASE_SETUP.md §6 says not to
+// delete it.
+const USE_CUSTOM_AUTH_DOMAIN = true;
 
 // Public client config, not a secret.
 const firebaseConfig = {

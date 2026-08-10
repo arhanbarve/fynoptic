@@ -122,13 +122,15 @@ The domain that used to appear beneath the app name on that same screen
 Console → **Authentication** → **Sign-in method** → **Google** → confirm a **support email**
 is set. Google shows it on the consent screen; a missing one can make the provider misbehave.
 
-## 6. Custom auth domain — HALF DONE, blocked on one console step
+## 6. Custom auth domain — DONE
 
-**Status: the rewrite is live; the flag is OFF.** `authDomain` is back to
-`financefirst-ee059.firebaseapp.com`.
+**Status: done and verified.** `authDomain` is `fynoptic.org`. The Google sign-in screen reads
+"Sign in to continue to **fynoptic.org**" — no `financefirst` anywhere on it.
 
-> ⚠️ This was switched on in `87e13a0` and reverted in `6897c29` about ten minutes later,
-> because Google sign-in died with **`Error 400: redirect_uri_mismatch`**.
+> ⚠️ **History worth keeping.** This was switched on in `87e13a0` and reverted in `6897c29`
+> ten minutes later, because Google sign-in died with **`Error 400: redirect_uri_mismatch`**.
+> It went back on only after the OAuth client was fixed and the popup was driven end to end
+> against Google.
 >
 > Firebase builds the Google OAuth redirect URI out of `authDomain` —
 > `https://<authDomain>/__/auth/handler` — and auto-registers it in the project's OAuth
@@ -141,20 +143,38 @@ is set. Google shows it on the consent screen; a missing one can make the provid
 > is necessary but **not sufficient**. Serving the helper page and being *allowed to redirect
 > to it* are two different things. Don't take a 200 there as proof again.
 
-### To finish it (in this order — the order is the whole point)
+### What made it work (and what to redo if it ever regresses)
 
 1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=financefirst-ee059)
    → **APIs & Services** → **Credentials** → the **Web** OAuth 2.0 Client ID for this project
-2. Under **Authorized redirect URIs**, add:
-   `https://fynoptic.org/__/auth/handler`
-   Keep the existing `https://financefirst-ee059.firebaseapp.com/__/auth/handler` — removing it
-   strands the fallback in step 4.
-3. Save, wait a few minutes for propagation, and confirm Google sign-in still works on the live
-   site (it will, since the flag is still off — you're just checking you broke nothing)
-4. Only now set `USE_CUSTOM_AUTH_DOMAIN = true` in `src/lib/auth.ts` and deploy. If sign-in
-   breaks, set it back to `false` — that's the whole fallback.
+2. **Authorized redirect URIs** must contain **both**:
+   - `https://financefirst-ee059.firebaseapp.com/__/auth/handler` ← do not delete, it's the fallback
+   - `https://fynoptic.org/__/auth/handler` ← added 2026-08-09
+3. `USE_CUSTOM_AUTH_DOMAIN = true` in `src/lib/auth.ts`
+4. The `/__/auth/:path*` rewrite in `vercel.json`
 
-Doing step 4 before step 1 is exactly what happened the first time.
+Order matters: 3 before 2 is what broke it the first time.
+
+### How to actually verify it, if you change any of the above
+
+Do not just curl `/__/auth/handler` and call a 200 proof — it was 200 the whole time sign-in
+was broken. Drive the popup and read what Google returns:
+
+```js
+// against a local `npm run preview`, so production is never the test subject
+const ctx = await browser.newContext();
+const page = await ctx.newPage();
+await page.goto('http://localhost:4321');
+await page.locator('#user-btn').click();
+const popup = await Promise.all([ctx.waitForEvent('page'), page.locator('#google-login').click()])
+  .then(([p]) => p);
+await popup.waitForTimeout(4000);
+console.log(popup.url(), await popup.evaluate(() => document.body.innerText));
+```
+
+Pass looks like `accounts.google.com` and "Sign in to continue to fynoptic.org".
+Fail looks like `Error 400: redirect_uri_mismatch`. `localhost` is already an authorized
+domain, so this works without deploying anything.
 
 ### What it buys you, once finished
 
