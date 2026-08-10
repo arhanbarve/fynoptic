@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Page, type Request, type Route } from '@playwright/test';
 
 // Requires the Firebase Auth emulator, same as auth.spec.ts and profile.spec.ts.
 // Characterizes the Phase 10c integration: ProfileSettings.tsx mounted inside
@@ -45,7 +45,36 @@ const EMULATOR_HOST = 'http://127.0.0.1:9099';
 const ONE_PIXEL_PNG_DATA_URL =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
+// PUBLIC_AUTH_EMULATOR is inlined by Vite at BUILD time, so it has to be set
+// before `astro build`, not just before `playwright test` — which is exactly
+// what `npm run test:e2e` does. Run playwright directly against a dist built
+// without it (or against a stray dev server on :4321, which webServer happily
+// reuses when CI is unset) and the app points at the REAL Firebase project
+// instead: sign-ups create real accounts, and the oobCode lookup below then
+// fails with a baffling "No VERIFY_EMAIL oobCode found". Every sign-up here
+// watches for that and reports the actual cause.
+//
+// A passive listener, deliberately — page.route() could abort the request
+// outright, but enabling routing also disables the page's HTTP cache, which
+// timed two of auth.spec.ts's sign-out tests out under full-suite parallel
+// load. Detection beats prevention when prevention costs the suite.
+//
+// Matched on the real origin: the emulator's own REST surface carries
+// "identitytoolkit.googleapis.com" as a PATH segment
+// (http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp),
+// so a bare substring test would flag the emulator too.
+const REAL_FIREBASE_AUTH = 'https://identitytoolkit.googleapis.com/';
+const MISWIRED =
+  'Sign-up tried to reach real Firebase (identitytoolkit.googleapis.com), not the Auth emulator. ' +
+  'The build under test was made without PUBLIC_AUTH_EMULATOR — run `npm run test:e2e`, which sets it before the build.';
+
 async function signUpFromHome(page: Page, email: string): Promise<void> {
+  let hitRealFirebase = false;
+  const watch = (req: Request) => {
+    if (req.url().startsWith(REAL_FIREBASE_AUTH)) hitRealFirebase = true;
+  };
+  page.on('request', watch);
+
   await page.goto('/');
   await page.locator('#user-btn').click();
   await page.getByRole('button', { name: 'Create an account' }).click();
@@ -53,7 +82,19 @@ async function signUpFromHome(page: Page, email: string): Promise<void> {
   await page.locator('#signup-password').fill(PASSWORD);
   await page.locator('#signup-confirm').fill(PASSWORD);
   await page.locator('#signup-submit').click();
-  await expect(page.locator('#auth-modal')).toBeHidden();
+  // Deliberately not just on the failure path: against real Firebase the
+  // sign-up SUCCEEDS, so the modal closes and the test would sail on —
+  // creating a production account and only failing later, somewhere
+  // unrelated. Any contact at all is the failure.
+  let failure: unknown = null;
+  try {
+    await expect(page.locator('#auth-modal')).toBeHidden();
+  } catch (err) {
+    failure = err;
+  }
+  page.off('request', watch);
+  if (hitRealFirebase) throw new Error(MISWIRED);
+  if (failure) throw failure;
 }
 
 // Real Firebase Auth emulator REST API (not mocked): every pending
@@ -64,7 +105,7 @@ async function fetchLatestVerifyOobCode(email: string): Promise<string> {
   const res = await fetch(`${EMULATOR_HOST}/emulator/v1/projects/${PROJECT_ID}/oobCodes`);
   const { oobCodes } = (await res.json()) as { oobCodes: Array<{ email: string; requestType: string; oobCode: string }> };
   const match = oobCodes.filter((c) => c.email === email && c.requestType === 'VERIFY_EMAIL').pop();
-  if (!match) throw new Error(`No VERIFY_EMAIL oobCode found for ${email}`);
+  if (!match) throw new Error(`No VERIFY_EMAIL oobCode found for ${email}. ${MISWIRED}`);
   return match.oobCode;
 }
 
