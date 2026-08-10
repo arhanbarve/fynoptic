@@ -21,7 +21,7 @@
  */
 export function PartnerStrip() {
   return (
-    <div className="partners reveal-up delay-3">
+    <div className="partners reveal-up delay-3" suppressHydrationWarning>
       <div className="partners-head">
         <span className="partners-kicker">In Partnership With</span>
       </div>

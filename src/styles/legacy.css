@@ -5901,6 +5901,7 @@ h2{font-family:var(--font-head);font-weight:700;font-size:clamp(1.8rem,2.2vw,2.6
 }
 .logo-track{
   display:flex;gap:18px;align-items:center;will-change:transform;
+  width:max-content;
   animation:logo-scroll 38s linear infinite;
 }
 
