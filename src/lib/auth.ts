@@ -35,18 +35,29 @@ import {
 
 import { createStore } from './store';
 
-// True since the vercel.json `/__/auth/:path*` rewrite landed. The one thing
-// this depends on is that https://fynoptic.org/__/auth/handler serves
-// Firebase's helper page rather than a 404 — popup sign-in routes through
-// authDomain too, so pointing this at a domain that doesn't serve the helper
-// breaks Google sign-in entirely. If that URL ever stops resolving (rewrite
-// removed, hosting moved), set this back to false and sign-in keeps working
-// off the firebaseapp.com domain.
+// Back to false: turning it on broke Google sign-in with
+// `Error 400: redirect_uri_mismatch`, and the reason is a prerequisite the
+// previous commit missed.
 //
-// fynoptic.org was already in Firebase Console -> Authentication -> Settings
-// -> Authorized domains (popup sign-in from this origin has been working), so
-// the proxy route needed no console change.
-const USE_CUSTOM_AUTH_DOMAIN = true;
+// Firebase derives the Google OAuth redirect URI from authDomain:
+// `https://<authDomain>/__/auth/handler`. It auto-registers that URI in the
+// project's OAuth client for its OWN firebaseapp.com domain, and only that
+// one. Point authDomain at a custom domain and the popup starts asking Google
+// for `https://fynoptic.org/__/auth/handler`, which isn't on the client's
+// Authorized redirect URIs — so Google rejects the request before the consent
+// screen renders. Serving the helper page at that path (the vercel.json
+// rewrite, still in place and still returning 200) is necessary but not
+// sufficient; the URI has to be whitelisted too.
+//
+// To turn this back on, in order:
+//   1. Google Cloud Console -> APIs & Services -> Credentials -> the Web
+//      OAuth client for this project -> Authorized redirect URIs -> add
+//      https://fynoptic.org/__/auth/handler  (keep the existing
+//      firebaseapp.com one; removing it strands the fallback below)
+//   2. Wait for it to propagate, then confirm Google sign-in works
+//   3. Flip this to true and deploy
+// Do not reorder those. Step 3 before step 1 is exactly what broke it.
+const USE_CUSTOM_AUTH_DOMAIN = false;
 
 // Public client config, not a secret.
 const firebaseConfig = {
