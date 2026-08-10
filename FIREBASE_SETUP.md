@@ -122,12 +122,46 @@ The domain that used to appear beneath the app name on that same screen
 Console → **Authentication** → **Sign-in method** → **Google** → confirm a **support email**
 is set. Google shows it on the consent screen; a missing one can make the provider misbehave.
 
-## 6. Custom auth domain — DONE (was: "impossible on GitHub Pages")
+## 6. Custom auth domain — HALF DONE, blocked on one console step
 
-**Status: done, no console work needed.** `authDomain` is now `fynoptic.org`.
+**Status: the rewrite is live; the flag is OFF.** `authDomain` is back to
+`financefirst-ee059.firebaseapp.com`.
+
+> ⚠️ This was switched on in `87e13a0` and reverted in `6897c29` about ten minutes later,
+> because Google sign-in died with **`Error 400: redirect_uri_mismatch`**.
+>
+> Firebase builds the Google OAuth redirect URI out of `authDomain` —
+> `https://<authDomain>/__/auth/handler` — and auto-registers it in the project's OAuth
+> client **for its own firebaseapp.com domain only**. Point `authDomain` at a custom domain
+> and the popup starts asking Google for `https://fynoptic.org/__/auth/handler`, which is not
+> on the client's Authorized redirect URIs, so Google rejects the request before the consent
+> screen renders.
+>
+> The check that made it look safe — `https://fynoptic.org/__/auth/handler` returning 200 —
+> is necessary but **not sufficient**. Serving the helper page and being *allowed to redirect
+> to it* are two different things. Don't take a 200 there as proof again.
+
+### To finish it (in this order — the order is the whole point)
+
+1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=financefirst-ee059)
+   → **APIs & Services** → **Credentials** → the **Web** OAuth 2.0 Client ID for this project
+2. Under **Authorized redirect URIs**, add:
+   `https://fynoptic.org/__/auth/handler`
+   Keep the existing `https://financefirst-ee059.firebaseapp.com/__/auth/handler` — removing it
+   strands the fallback in step 4.
+3. Save, wait a few minutes for propagation, and confirm Google sign-in still works on the live
+   site (it will, since the flag is still off — you're just checking you broke nothing)
+4. Only now set `USE_CUSTOM_AUTH_DOMAIN = true` in `src/lib/auth.ts` and deploy. If sign-in
+   breaks, set it back to `false` — that's the whole fallback.
+
+Doing step 4 before step 1 is exactly what happened the first time.
+
+### What it buys you, once finished
 
 Everything below the next heading was written when the site was on GitHub Pages, which
-couldn't do rewrites. Vercel can, so the route the old table marked ❌ is the one now in use:
+couldn't do rewrites. Vercel can, so the route the old table marked ❌ is the one this is
+built on. The rewrite half is deployed and working; only the flag is waiting on the OAuth
+client step above:
 
 ```jsonc
 // vercel.json
@@ -144,14 +178,19 @@ That is Firebase's documented reverse-proxy setup, and it buys two things:
 - `signInWithRedirect()` becomes viable, because the auth iframe is same-origin now. The code
   still uses popup only; switching is a separate change and popup works fine.
 
-No Firebase Console step was required: the proxy route needs `fynoptic.org` in **Authorized
-domains**, and it was already there — popup sign-in from this origin has been working.
+Two console prerequisites, not one. `fynoptic.org` under **Authorized domains** was already
+satisfied (popup sign-in from this origin works). The second — `https://fynoptic.org/__/auth/handler`
+under the OAuth client's **Authorized redirect URIs** — was not, and is the step above.
 
-**If Google sign-in ever breaks, check this first.** Load
-`https://fynoptic.org/__/auth/handler` in a browser. Firebase's helper page means the rewrite
-is live. A 404 means it isn't, and popup sign-in will be broken site-wide, because popup
-routes through `authDomain` too. The fix is one line — set `USE_CUSTOM_AUTH_DOMAIN = false` in
-`src/lib/auth.ts` and redeploy, which falls back to the firebaseapp.com domain.
+**If Google sign-in breaks, check both, in this order:**
+
+1. `Error 400: redirect_uri_mismatch` → the OAuth client is missing the redirect URI. Either
+   add it (steps above) or set `USE_CUSTOM_AUTH_DOMAIN = false` and redeploy.
+2. `https://fynoptic.org/__/auth/handler` returning 404 → the vercel.json rewrite is gone.
+   Same one-line fallback.
+
+A 200 at that URL proves the rewrite is live. It does **not** prove sign-in works — that was
+the mistaken inference the first time round.
 
 ### Historical: why redirect used to be disabled in code
 
