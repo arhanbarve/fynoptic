@@ -1,12 +1,16 @@
 // Port of the auth-overhaul branch's js/auth.js. Firebase 12.17.1 via the npm
 // package instead of gstatic CDN URLs; same config, same behavior.
 //
-// Google sign-in is popup-only. signInWithRedirect cannot work while authDomain
-// sits on a different origin than the site (financefirst-ee059.firebaseapp.com
-// vs fynoptic.org) — browsers that block third-party storage access fail the
-// cross-origin iframe silently. See FIREBASE_SETUP.md #6 for the path to enable
-// redirect (Cloudflare proxy or move hosting), and the USE_CUSTOM_AUTH_DOMAIN
-// flag below, which must stay false until that infra exists.
+// authDomain now sits on the site's own origin (fynoptic.org), served by the
+// `/__/auth/:path*` rewrite in vercel.json which proxies to
+// financefirst-ee059.firebaseapp.com. That is Firebase's documented
+// reverse-proxy route, and it does two things: the Google consent screen stops
+// showing "financefirst-ee059.firebaseapp.com" under the app name, and the
+// third-party-storage problem that made signInWithRedirect unusable goes away,
+// since the auth iframe is no longer cross-origin.
+//
+// Sign-in is still popup-only here — enabling redirect is a separate change and
+// popup works fine. See FIREBASE_SETUP.md #6.
 
 import { FirebaseError, initializeApp, type FirebaseApp } from 'firebase/app';
 import {
@@ -31,10 +35,18 @@ import {
 
 import { createStore } from './store';
 
-// Flip to true ONLY after completing the steps in FIREBASE_SETUP.md (Firebase
-// Console -> Authentication -> Settings -> Authorized domains + custom auth
-// domain, plus DNS). Turning this on before DNS resolves breaks Google sign-in.
-const USE_CUSTOM_AUTH_DOMAIN = false;
+// True since the vercel.json `/__/auth/:path*` rewrite landed. The one thing
+// this depends on is that https://fynoptic.org/__/auth/handler serves
+// Firebase's helper page rather than a 404 — popup sign-in routes through
+// authDomain too, so pointing this at a domain that doesn't serve the helper
+// breaks Google sign-in entirely. If that URL ever stops resolving (rewrite
+// removed, hosting moved), set this back to false and sign-in keeps working
+// off the firebaseapp.com domain.
+//
+// fynoptic.org was already in Firebase Console -> Authentication -> Settings
+// -> Authorized domains (popup sign-in from this origin has been working), so
+// the proxy route needed no console change.
+const USE_CUSTOM_AUTH_DOMAIN = true;
 
 // Public client config, not a secret.
 const firebaseConfig = {

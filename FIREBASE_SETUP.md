@@ -3,7 +3,11 @@
 Everything fixable in code has been fixed. This file lists what's left, all of which lives in
 the Firebase Console, your DNS, or your hosting setup — I can't reach any of it from here.
 
-Project: `financefirst-ee059` · Site: `fynoptic.org` (GitHub Pages) · SDK: Firebase JS 12.17.1
+Project: `financefirst-ee059` · Site: `fynoptic.org` (**Vercel**) · SDK: Firebase JS 12.17.1
+
+> Hosting moved from GitHub Pages to Vercel (`vercel.json` at the repo root; responses carry a
+> `server: Vercel` header). Several notes below were written against GitHub Pages and said
+> things were impossible that Vercel does natively — §6 in particular. Corrected inline.
 
 Items are ordered by how badly they bite you. **1 and 2 are the ones that can leave sign-in
 broken or your storage bucket wide open — do those first.**
@@ -93,16 +97,63 @@ The site had **no password recovery at all** before this change. The code now ca
 Also confirm **Email/Password** is enabled under **Authentication → Sign-in method** — the
 signup and reset flows both depend on it.
 
+## 4b. Rename the project so sign-in stops saying "Finance First" — CONSOLE ONLY
+
+The Google sign-in screen reads "continue to **Finance First**". That string is not in the
+repo — grep for it and you get nothing. It lives in three console places, all separate:
+
+1. **The sign-in consent screen.** [Google Cloud Console](https://console.cloud.google.com/)
+   → project `financefirst-ee059` → **APIs & Services** → **OAuth consent screen** → *App
+   name*. This is the one users read. Set it to `Fynoptic`.
+2. **The Firebase project display name.** Firebase Console → ⚙ **Project settings** →
+   **General** → *Project name*. Cosmetic, but it feeds several other surfaces.
+3. **Password reset emails.** Firebase Console → **Authentication** → **Templates** → sender
+   name (see §4 above, still outstanding).
+
+The project **ID** — `financefirst-ee059` — is permanent. Google does not allow renaming it,
+and it appears in `apiKey`/`storageBucket`/`appId` in `src/lib/auth.ts`. Changing the display
+names above does not touch it, and nothing breaks.
+
+The domain that used to appear beneath the app name on that same screen
+(`financefirst-ee059.firebaseapp.com`) is handled by §6 below, which is now done.
+
 ## 5. Google provider support email
 
 Console → **Authentication** → **Sign-in method** → **Google** → confirm a **support email**
 is set. Google shows it on the consent screen; a missing one can make the provider misbehave.
 
-## 6. Optional: enable redirect-based Google sign-in
+## 6. Custom auth domain — DONE (was: "impossible on GitHub Pages")
 
-**You do not need this. Skip it unless popups are causing you real problems.**
+**Status: done, no console work needed.** `authDomain` is now `fynoptic.org`.
 
-### Why redirect is currently disabled in code
+Everything below the next heading was written when the site was on GitHub Pages, which
+couldn't do rewrites. Vercel can, so the route the old table marked ❌ is the one now in use:
+
+```jsonc
+// vercel.json
+"rewrites": [
+  { "source": "/__/auth/:path*",
+    "destination": "https://financefirst-ee059.firebaseapp.com/__/auth/:path*" }
+]
+```
+
+That is Firebase's documented reverse-proxy setup, and it buys two things:
+
+- The Google consent screen no longer shows `financefirst-ee059.firebaseapp.com` beneath the
+  app name — it shows `fynoptic.org`.
+- `signInWithRedirect()` becomes viable, because the auth iframe is same-origin now. The code
+  still uses popup only; switching is a separate change and popup works fine.
+
+No Firebase Console step was required: the proxy route needs `fynoptic.org` in **Authorized
+domains**, and it was already there — popup sign-in from this origin has been working.
+
+**If Google sign-in ever breaks, check this first.** Load
+`https://fynoptic.org/__/auth/handler` in a browser. Firebase's helper page means the rewrite
+is live. A 404 means it isn't, and popup sign-in will be broken site-wide, because popup
+routes through `authDomain` too. The fix is one line — set `USE_CUSTOM_AUTH_DOMAIN = false` in
+`src/lib/auth.ts` and redeploy, which falls back to the firebaseapp.com domain.
+
+### Historical: why redirect used to be disabled in code
 
 `signInWithRedirect()` works by loading a cross-origin iframe from your `authDomain`. Chrome
 and Safari now block third-party storage access, so that iframe fails whenever `authDomain`
@@ -121,13 +172,14 @@ Firebase's own recommended option for your situation, and it needs zero console 
 
 ### If you still want redirect
 
-Firebase offers three routes. Two of them are blocked by GitHub Pages:
+Firebase offers three routes. This table was accurate on GitHub Pages and is kept for the
+reasoning; on Vercel the third row is a ✅ and is what the site now does (see the top of §6):
 
 | Route | Works on GitHub Pages? |
 |---|---|
 | Keep using popup (current) | ✅ Already done |
 | Serve the site from Firebase Hosting, set `authDomain: 'fynoptic.org'` | ❌ Requires migrating hosting off GitHub Pages |
-| Reverse-proxy `/__/auth/**` → `financefirst-ee059.firebaseapp.com` | ❌ GitHub Pages can't do rewrites (it fronts with Fastly/Varnish and gives you no config) |
+| Reverse-proxy `/__/auth/**` → `financefirst-ee059.firebaseapp.com` | ❌ on GitHub Pages (it fronts with Fastly/Varnish and gives you no config) · ✅ on Vercel — **this is what's in use now** |
 
 So to get redirect working you'd need to change where the site is served from. Two viable paths:
 

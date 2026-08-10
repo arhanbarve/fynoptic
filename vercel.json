@@ -4,6 +4,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/__/auth/:path*",
+      "destination": "https://financefirst-ee059.firebaseapp.com/__/auth/:path*"
+    }
+  ],
   "redirects": [
     {
       "source": "/(.*)",

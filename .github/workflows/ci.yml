@@ -29,8 +29,40 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: e2e (Firebase Auth emulator)
         run: npx firebase emulators:exec --only auth "npm run test:e2e"
-      - run: npm run test:visual:capture
-      - run: npm run test:visual:diff
+      # Both visual steps drive a browser against a running site, but nothing
+      # was serving one: playwright.config.ts starts `npm run preview` for the
+      # e2e step above and tears it down when that run ends, so these two got
+      # ERR_CONNECTION_REFUSED on localhost:4321 and failed the job outright.
+      # They share one step so the server's lifetime covers both.
+      #
+      # Capture-then-diff in the same run can't fail on pixels — it diffs
+      # against the baseline it just wrote. That's deliberate: the baseline
+      # PNGs are 24 MB and gitignored, so CI has nothing to compare against.
+      # What this actually gates is that the capture pipeline drives all 48
+      # page/theme/viewport combinations without crashing. Real visual
+      # regression testing is a local workflow against a committed baseline.
+      - name: Visual capture + diff (against a live preview server)
+        run: |
+          npm run preview &
+          preview_pid=$!
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:4321/index.html >/dev/null && break
+            sleep 1
+          done
+          if ! curl -sf http://localhost:4321/index.html >/dev/null; then
+            echo "preview server never came up on :4321"
+            kill "$preview_pid" 2>/dev/null || true
+            exit 1
+          fi
+          # The step's shell runs with `-e`, which would abort before the
+          # cleanup below if either script exits non-zero — leaving the server
+          # running and losing the real status. Disable it across the pair.
+          set +e
+          npm run test:visual:capture && npm run test:visual:diff
+          status=$?
+          set -e
+          kill "$preview_pid" 2>/dev/null || true
+          exit $status
       - name: Upload visual diff artifacts
         if: failure()
         uses: actions/upload-artifact@v4
