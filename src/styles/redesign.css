@@ -403,6 +403,43 @@ html body .auth-link button {
   * { animation: none !important; }
 }
 
+/* ---- 8b. reveal on scroll (not on load) --------------------------------- */
+/* legacy.css:2613 gives `.fade-up` `animation: fadeUp .7s ease-out forwards`,
+   which fires the moment the element is parsed regardless of where it is on
+   the page. On /courses that meant all fourteen bands — ten of them below
+   the fold — played their entrance simultaneously during load and were
+   already static by the time anyone scrolled to them. The class was also
+   sitting at `opacity: 0` waiting on either that animation or an `.in-view`
+   the IntersectionObserver only ever added on the homepage, because
+   initReveal() was called from index.astro rather than the layout.
+
+   Both halves are fixed together: initReveal() now runs from Base.astro on
+   every page (see that file), and the reveal is gated on `html.page-loaded`
+   — a class only JS can add. So the resting state is plain visible content,
+   and readers without JS, or before the observer exists, never see an
+   element hidden behind an animation that cannot fire. */
+html body .fade-up {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+html.page-loaded body .fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+html.page-loaded body .fade-up.in-view {
+  opacity: 1;
+  transform: none;
+}
+/* Belt and braces for the rest of the reveal family: if the class is on an
+   element and JS never ran, the content is visible, full stop. */
+html.no-js :is(.fade-up, .reveal, .reveal-up, .reveal-card, .reveal-section, .reveal-prism, .reveal-cta, .reveal-in) {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+}
+
 /* ============================================================================
    9. ONE RAIL
    ----------------------------------------------------------------------------
@@ -579,6 +616,19 @@ html body .header :is(a, button).btn.btn-primary {
   line-height: 1 !important;
   white-space: nowrap;
 }
+/* …but that `display: inline-flex !important` is unconditional, and
+   `.cta-desktop` IS a `.btn.btn-primary` inside `.header`, so this rule was
+   silently resurrecting the header CTA on phones — legacy.css hides it at
+   `max-width: 768px` with its own `!important`, and lost on specificity
+   (0,1,0 against this rule's 0,3,3). The bar then measured 494px against a
+   390px viewport: the CTA ran off the right edge, half its label unreadable
+   and its right half untappable, and only `overflow-x: clip` on <html>
+   stopped the whole page scrolling sideways. The drawer already carries the
+   same CTA, which is why legacy wanted it gone here. */
+@media (max-width: 768px) {
+  html body .header :is(a, button).btn.btn-primary.cta-desktop { display: none !important; }
+}
+
 /* Signed IN this is the avatar/initials square; signed out the pill rule in
    section 16 takes over. Both are the same height as everything else now. */
 html body .header .user-icon {
@@ -927,6 +977,32 @@ html body .controls-row {
   align-items: stretch !important;
   flex-wrap: nowrap !important;
 }
+/* `nowrap` is a desktop instruction: it exists so the three controls stay on
+   one line at widths where they fit. Below ~720px they don't — the row
+   measured 699px inside a 390px viewport, which pushed the sort <select>
+   half off the screen and put the "Unread Only" chip and the result count
+   entirely outside it, unreachable (the page can't scroll sideways to them,
+   `overflow-x: clip`). The row wraps on phones and the search field takes
+   the first line to itself. */
+@media (max-width: 720px) {
+  html body .controls-row { flex-wrap: wrap !important; }
+  html body .controls .search-wrap { flex: 1 1 100% !important; }
+  /* `!important` because the desktop `.sort { flex: 0 0 auto }` rule below
+     is same-specificity and later in the file — a media query adds no
+     weight of its own. */
+  html body .controls .sort { flex: 1 1 100% !important; flex-wrap: wrap; min-width: 0; }
+  /* legacy.css sizes the sort <select> off its own longest option, and a
+     <select> will not shrink below that intrinsic width without an explicit
+     `min-width: 0` — so wrapping the row alone still left it hanging past
+     the right edge of a 390px screen. */
+  html body .controls .sort select {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  html body .controls .result-count { min-width: 0; justify-content: flex-start; }
+}
 html body .controls .search-wrap,
 html body .controls .sort select,
 html body .controls .sort .chip {
@@ -1048,10 +1124,133 @@ html body .article-page .reader-body p {
 html body .article-page .reader-body h2 { font-size: 1.6rem !important; margin-top: 2em !important; }
 html body .article-page .reader-body h3 { font-size: 1.3rem !important; margin-top: 1.6em !important; }
 
+/* ============================================================================
+   17. THE RAIL, CONTINUED — the three bands §9 missed
+   ----------------------------------------------------------------------------
+   §9 above pinned one content edge for the homepage's bands and the footer.
+   These three pages were never audited against it and each still centres a
+   block under a left-aligned heading, which is exactly the "nothing lines
+   up" symptom §9 was written to end.
+   ========================================================================== */
+
+/* /practice — `.wizard` is a grid, and a grid item with a definite
+   `max-width` under the default `justify-items` lands centred in its track
+   in Chrome. So the h1 sat on the rail at x=152 while the step indicator
+   (x=466) and the 640px wizard panel (x=400) floated in the middle of the
+   page and the stats/stage cards below them ran the full 1136px — four
+   different left edges on one screen. All of it goes on the rail; the panel
+   keeps its 640px measure, it just stops being centred inside it. */
+html body .wizard { justify-items: start !important; }
+html body .wizard-progress { justify-content: flex-start !important; }
+/* The panel's own heading, its submit row and its footnote were all centred
+   against left-aligned fields, so nothing inside the panel agreed with
+   anything else inside it either. */
+html body .wizard-panel .topics-title.center { text-align: left !important; }
+html body .wizard-actions { display: flex; justify-content: flex-start; }
+html body .wizard-panel .note.center { text-align: left !important; }
+/* `align-items: end` (legacy.css:5757) bottom-aligns the two grid columns,
+   so "Questions" sat level with the *bottom* of the two-card Category
+   stack rather than level with the "Category" label it pairs with — the
+   two field labels in a row never lined up. */
+html body .wizard .wizard-fields { align-items: start !important; }
+
+/* /bot — two separate faults in one band.
+   1. `.chat-area` is also `.container`, and legacy.css:5825 redeclares
+      `.container { padding: 0 var(--gutter) }` as a shorthand 4,000 lines
+      after `.chat-area { padding: 3rem 2rem }`, resetting padding-block to
+      0 at equal specificity. The <h1> therefore started at the exact pixel
+      the sticky header ends, with its ascenders tucked under the bar. This
+      is the same collision `.articles-hero` documents above; longhand fixes
+      it for good.
+   2. The title block was centred while its own subtitle, the chat window
+      and the composer under it are left-aligned inside a 1136px box — and
+      because `main h1:not(.hero h1)` caps the h1 at 30ch, "Fix-it Bot"
+      centred inside a 600px box rather than the page, landing at x=452:
+      aligned with nothing at all. */
+html body .chat-area {
+  padding-block: clamp(2.5rem, 5vw, 3.5rem) clamp(2rem, 4vw, 3rem) !important;
+}
+html body .chat-title,
+html body .chat-title h1,
+html body .chat-subtext { text-align: left !important; margin-inline: 0 !important; }
+
+/* /bot — the composer's submit button is a bare `<button type="submit">`
+   with no class, so none of the button rules in §3 reach it and it kept
+   legacy's --primary-600 fill: a second, brighter blue than the flat optic
+   fill every other CTA on the site uses. */
+html body .chat-form button[type="submit"] {
+  background: var(--db-optic) !important;
+  background-image: none !important;
+  color: var(--db-optic-ink) !important;
+  border: 1px solid var(--db-optic) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+html body .chat-form button[type="submit"]:hover { filter: brightness(1.08); }
+
+/* /accessibility — `.slab-title` still carries legacy.css:6256's
+   `text-align: center`; the About page's copy of that fix (§ABOUT PAGE
+   below) is scoped to .founders-slab/.partners-slab and never reached this
+   page's heading, which sits above left-aligned body copy. */
+html body .a11y-page .slab-title { text-align: left !important; }
+html body .a11y-content :is(h1, h2, p, ul) { max-width: min(68ch, 660px); }
+
+/* ---- 18. the partner marquee's edges ------------------------------------ */
+/* The strip lives in the hero's left grid column, which is 574px wide at
+   1440 — a third of what legacy.css's 6% mask fade was written for. A 34px
+   fade against a 176px logo plate reads as a hard cut through the middle of
+   a logo rather than a marquee running past the edge of a window. */
+html body .logo-ticker {
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 88%, transparent 100%) !important;
+}
+
 /* ---------------------------------------------------------------------- */
 /* Commit 4 — Courses page: row gap, centred lock text, padlock hover     */
 /* Spec: docs/superpowers/plans/2026-08-09-design-fixes-spec.md §3        */
 /* ---------------------------------------------------------------------- */
+
+/* 3.4 Card heights. A CSS grid stretches every item in a row to the tallest
+   one, and the only unlocked course card carries a full brief — audience,
+   duration, three outcome bullets, six module chips, a progress bar and a
+   button — inside a 266px column, which comes out 960px tall. The three
+   "coming soon" cards beside it therefore rendered 960px tall as well, each
+   with roughly 700px of empty diagonal-striped mask under two lines of
+   text; the second row, which is nothing but locked cards, inherited the
+   same look. `align-items: start` lets every card be its own height. The
+   min-height keeps the locked ones from collapsing to a caption strip, and
+   is a floor, not a fixed size. */
+html body .courses-grid { align-items: start !important; }
+/* `.soon-mask` is an `inset: 0` overlay that centres its padlock and its
+   "AVAILABLE AFTER COMPLETING COURSE n" line over the whole card, and its
+   scrim is only 20-60% opaque — so it never hid the card's own title, it
+   just happened to sit clear of it while the card was 960px tall. Once the
+   cards size to their content that centred line lands straight on top of
+   the title. The strip is anchored to the bottom of the card instead, and
+   the card reserves the height it occupies, so the two never overlap at
+   any card height or title length. */
+/* 148px is the measured height of the mask's own bottom strip — padlock
+   (26) + gap + the two-line "AVAILABLE AFTER COMPLETING COURSE n" (58) +
+   the hover hint (17) + its bottom padding — plus a little air. It is
+   reserved on the card rather than left to chance because the mask is an
+   overlay and contributes nothing to the card's layout height. */
+html body .course-card--soon {
+  min-height: 260px;
+  padding-bottom: 148px;
+}
+html body .course-card--soon .soon-mask {
+  justify-content: flex-end !important;
+  padding: 14px 14px 18px !important;
+}
+
+/* 3.5 Four 266px columns is also what forces the unlocked card to 960px in
+   the first place — a card that tall next to its siblings is the actual
+   source of the imbalance, not just its neighbours' stretching. Three
+   columns at desktop widths gives every card ~360px and roughly a third
+   off the tall one's height. */
+@media (min-width: 1100px) {
+  html body .courses-grid .course-card { grid-column: span 4 !important; }
+}
 
 /* 3.1 Row gap between the two sibling .courses-grid rows (confirmed bug:
    legacy.css's .courses-grid { gap: 1.5rem } only applies within a single

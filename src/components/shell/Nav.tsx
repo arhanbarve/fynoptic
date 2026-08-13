@@ -211,13 +211,22 @@ export function Nav() {
             data-modal-open={signedIn ? undefined : 'login-modal'}
             onClick={handleUserClick}
           >
-            <img
-              id="nav-avatar"
-              alt=""
-              hidden={!showAvatarImg}
-              src={showAvatarImg ? (photoURL ?? undefined) : undefined}
-              onError={() => setAvatarFailed(true)}
-            />
+            {/* Rendered only when there is actually a photo to show. It used
+                to ship on every page of the site as `<img hidden>` with no
+                `src` at all, which is the browser's broken-image state — the
+                element resolves as a failed image (`complete` with
+                `naturalWidth: 0`), which is what any image audit reports and
+                what some engines will paint a placeholder glyph for the
+                moment anything unsets `hidden`. `hidden` stays for the
+                signed-in-but-photo-failed case. */}
+            {showAvatarImg && (
+              <img
+                id="nav-avatar"
+                alt=""
+                src={photoURL ?? undefined}
+                onError={() => setAvatarFailed(true)}
+              />
+            )}
             <span id="nav-initials" aria-hidden="true" hidden={!signedIn || showAvatarImg}>
               {signedIn ? initialsFrom(user) : ''}
             </span>

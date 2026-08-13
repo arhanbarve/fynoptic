@@ -38,7 +38,17 @@ import { CourseOne } from '../components/course/CourseOne';
     }
 
     .course-shell { padding: 2rem 0 3rem; background: var(--grad-hero); position: relative; overflow: hidden; }
-    .course-shell .bg-noise { position: absolute; inset: 0; opacity: .06; }
+    /* width/height are not optional here. `inset: 0` on an absolutely
+       positioned REPLACED element with `width: auto` is over-constrained:
+       the box takes the image's intrinsic size and `right`/`bottom` are
+       ignored. texture-noise.svg is 700x700, so this painted a hard-edged
+       700px square of noise in the band's top-left corner — visible as a
+       rectangle with a seam down the middle of the hero on every viewport
+       wider than 700px — instead of tiling the band. */
+    .course-shell .bg-noise {
+      position: absolute; inset: 0; opacity: .06;
+      width: 100%; height: 100%; object-fit: cover;
+    }
 
     /* Dead CSS, ported as-is: no .a11y-bar/.stepper-wrap element exists in
        this page's markup (checked both this worktree's and auth-overhaul's
@@ -75,8 +85,21 @@ import { CourseOne } from '../components/course/CourseOne';
     .result { margin-top: .5rem; font-size: .95rem; color: var(--text-300); }
     .drawer { border-top: 1px dashed rgba(255,255,255,.12); margin-top: .6rem; padding-top: .6rem; }
     .id-grid { display: grid; gap: .75rem; }
-    .audit-form { display: grid; gap: .75rem; }
-    .row-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: .75rem; }
+    /* The form is a stack of full-width rows; the two-up pairing is `.row-2`'s
+       job, one level down. Without `grid-template-columns` pinned the form
+       resolved to two implicit tracks (183px + 226px against a 316px card on
+       a 390px phone) and pushed its inputs ~105px off the right of the
+       screen. */
+    .audit-form { display: grid; grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+    /* `minmax(220px, 1fr)` is a hard 220px floor, and `auto-fit` cannot
+       drop below it — so inside the Risk Audit card on a 390px phone
+       (~300px of content width after the page gutter and the card's own
+       padding) the track stayed 220px wide and its <input> pushed 105px
+       past the right edge of the screen. `min(220px, 100%)` keeps the
+       two-up layout wherever 220px actually fits and lets the track
+       collapse to the container below that. */
+    .row-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: .75rem; }
+    .row-2 :is(input, select, textarea) { min-width: 0; max-width: 100%; }
     .row-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: .75rem; }
     .audit-output { white-space: pre-wrap; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: .75rem; }
     .certificate { display: none; }

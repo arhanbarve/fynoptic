@@ -136,10 +136,20 @@ import Base from '../layouts/Base.astro';
 </Base>
 
 <style>
+  /* The measure belongs on the text, not on the container. `.privacy` is
+     also `.container`, which centres itself with `margin-inline: auto` — so
+     capping the container at 68ch centred the whole page's content and this
+     page alone started at x=367 while the nav, the footer and every other
+     band on the site start at x=152. Same fix, and the same reasoning, as
+     redesign.css §9 ("ONE RAIL") applies everywhere else, and as
+     `.article-page .reader-body` already uses for long-form copy. */
   .privacy {
-    max-width: 68ch;
     padding-top: clamp(24px, 4vw, 48px);
     padding-bottom: clamp(32px, 6vw, 64px);
+  }
+
+  .privacy :is(h1, h2, p, ul) {
+    max-width: min(68ch, 660px);
   }
 
   .privacy h1 {

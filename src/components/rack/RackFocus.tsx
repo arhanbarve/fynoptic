@@ -26,33 +26,55 @@ import { RACK_ITEMS, type RackItem } from './rack-data';
  */
 
 const NARROW_BREAKPOINT_PX = 900;
+/**
+ * The rack needs vertical room, not just horizontal. The pinned block is
+ * the viewport under the header, and it has to hold the section heading,
+ * four 62px names and the panel. Measured, the four names' last baseline
+ * falls 18px below the pin on a 600px-tall window and clears it with room
+ * to spare at 700 — so under 700 the pin cannot show its own content and
+ * `overflow: hidden` shears the bottom off "Practice" and the card. A
+ * pinned scroll sequence in 540px of usable height is a bad experience
+ * even when it does fit, so short windows take the same static tablist
+ * that narrow ones do.
+ */
+const SHORT_BREAKPOINT_PX = 700;
 
 /**
- * Height of the block that stays on screen: the viewport under the fixed
- * header, exactly. A shorter pin (68vh before, and briefly 520px during this
- * pass) leaves the rest of the scroll track showing as empty page below the
- * panel for the whole locked sequence — the section reads as a small card
- * floating over a void. Filling the viewport means the only thing on screen
- * while the section is locked is the section.
+ * Height of the block that stays on screen. Two constraints, and it has to
+ * satisfy both:
+ *
+ *  - It can never exceed the viewport under the fixed header, or the pinned
+ *    block doesn't fit on screen and the bottom of it is cut off.
+ *  - It must not exceed what the content inside it actually needs. Pinning
+ *    the *full* viewport height (what this was) means that on any tall
+ *    display the block is far bigger than the lead + names + panel inside
+ *    it, and `items-center` splits the difference into two equal bands of
+ *    nothing. Measured at 1440x1345 that was ~580px of dead space, and the
+ *    same slack shows up again as a ~500px void between the last panel and
+ *    the footer once the track releases (the pin is parked at the track's
+ *    bottom with its content still centred inside it).
+ *
+ * 760px is the content's real ceiling: RackLead (~200px) + the 460px panel
+ * + the 40-64px of air above the lead. `min()` keeps the viewport clamp for
+ * short windows.
  */
-const PIN_H = 'calc(100vh - var(--header-h, 56px))';
+const PIN_H = 'min(calc(100vh - var(--header-h, 56px)), 760px)';
 /**
  * Scroll distance spent on each rack transition. Track length is
- * PIN_H + STEP*segments = 842 + 3*152 = 1298px against a 900px viewport:
- * 1.44 screens, down from 2.15.
+ * PIN_H + STEP*segments = 760 + 3*243 = 1489px. Roughly the same total
+ * scroll cost as the old 1982px track, except none of it is now spent on
+ * dead space: every pixel advances the focus.
  *
- * Two things made the old one feel far longer than its 2.15 screens. It was
- * genuinely taller, and it wasted its own tail: progress was divided by
- * (trackHeight - viewportHeight) while the pinned block was only 68vh, so
- * focus arrived at the last item ~290px before the track released and the
- * remainder was dead scroll with nothing moving. useTrackProgress now
- * measures the pinned block itself, so every pixel of this track advances
- * the focus.
+ * 0.32 rather than the old 0.18: with PIN_H capped the absolute step would
+ * otherwise have shrunk with it, and `dwellEase` only spends half a segment
+ * travelling — 0.18 * 760 would have racked a whole item in 68px of scroll,
+ * which reads as a snap rather than a rack.
  */
-const STEP = `calc(${PIN_H} * 0.18)`;
+const STEP = `calc(${PIN_H} * 0.32)`;
 const DEFAULT_HEADER_H_PX = 56; // matches --header-h in redesign.css; re-read live below.
-const NAME_BLUR_CAP_PX = 3.4;
-const PANEL_BLUR_CAP_PX = 5;
+/** 3.4px smeared the defocused names into unreadable ghosts rather than reading as depth-of-field. */
+const NAME_BLUR_CAP_PX = 2.4;
+const PANEL_BLUR_CAP_PX = 4;
 
 function clamp01(n: number): number {
   return Math.min(1, Math.max(0, n));
@@ -243,31 +265,39 @@ function PanelHead({
 
 interface PanelProps {
   item: RackItem;
-  /** 0 = fully resolved/focused, 1 = fully defocused (mid cross-rack). */
+  /** 0 = fully resolved/focused, 1 = fully defocused (mid rack). */
   d: number;
-  /** true while this panel is the one gaining focus (resolves from scale .97), false while losing it (scales up toward 1.03). */
-  incoming: boolean;
 }
 
-function RackPanel({ item, d, incoming }: PanelProps) {
-  const blur = d * PANEL_BLUR_CAP_PX;
-  const opacity = 1 - d;
-  const scale = incoming ? 0.97 + (1 - d) * 0.03 : 1 + d * 0.03;
+/**
+ * The panel's *content*. The card shell around it (border, ground, radius)
+ * is a separate, permanently mounted box — see RackTrack.
+ *
+ * This used to be the whole card, and two of them were mounted at once and
+ * cross-dissolved. That produced the section's worst artefact: at the tails
+ * of a transition the arriving panel sat at ~5% opacity under 4.75px of
+ * blur, directly on top of the departing one, so "Articles" rendered as
+ * "Articles" with a smeared "Flashcards" bleeding through it. It read as a
+ * rendering fault, not a transition. Only one panel is mounted now — it
+ * racks out of focus, the content swaps at the midpoint, and it racks back
+ * in — so there is never a frame with two texts stacked on each other, and
+ * the card outline never double-draws or wobbles between two scales.
+ */
+function RackPanel({ item, d }: PanelProps) {
   const style: React.CSSProperties =
     d <= 0
       ? {} // fully resolved: no live filter, static end-state
       : {
-          filter: `blur(${blur}px)`,
-          opacity,
-          transform: `scale(${scale})`,
+          filter: `blur(${d * PANEL_BLUR_CAP_PX}px)`,
+          opacity: 1 - d,
+          transform: `scale(${1 - d * 0.02})`,
         };
 
   return (
     <div
       data-rack-panel={item.id}
-      className="absolute inset-0 flex flex-col justify-center gap-4 rounded-lg border border-border bg-card p-6 sm:p-7"
+      className="flex flex-col justify-center gap-4"
       style={style}
-      aria-hidden={d >= 1 ? true : undefined}
     >
       <PanelHead item={item} statColor={mixColor(item.accent, 1 - d)} />
       <p className="max-w-[40ch] text-lg text-muted-foreground sm:text-[1.3125rem]">
@@ -275,7 +305,7 @@ function RackPanel({ item, d, incoming }: PanelProps) {
       </p>
       <a
         href={item.href}
-        className="mt-1 inline-flex items-center gap-1 text-[1.125rem] font-medium text-primary underline-offset-4 hover:underline"
+        className="mt-1 inline-flex w-fit items-center gap-1 text-[1.125rem] font-medium text-primary underline-offset-4 hover:underline"
       >
         Explore {item.title}
       </a>
@@ -316,6 +346,15 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
   const lowIndex = Math.max(0, Math.min(items.length - 1, Math.floor(focus)));
   const highIndex = Math.min(items.length - 1, lowIndex + 1);
   const crossFrac = clamp01(focus - lowIndex);
+
+  // One panel, racked out and back in, rather than two cross-dissolving —
+  // see RackPanel. The swap happens at the midpoint of the travel, where
+  // the content is fully defocused and nothing legible is on screen to
+  // pop. `panelD` runs 0 -> 1 -> 0 across the segment.
+  const pastMidpoint = crossFrac >= 0.5;
+  const panelIndex = pastMidpoint ? highIndex : lowIndex;
+  const panelD = pastMidpoint ? (1 - crossFrac) / 0.5 : crossFrac / 0.5;
+  const panelItem = items[panelIndex];
 
   const scrollToItem = useCallback(
     (i: number) => {
@@ -374,33 +413,37 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
             locked sequence instead of handing the reader four bare words. */}
         <RackLead />
 
-        {/* 980px, not the container's 1200: at full width the names and the
-            panel sat at opposite ends of the screen and stopped reading as
-            one object. `items-center` centres the row in whatever the pin has
-            left under the lead, so the group sits optically in the frame
-            rather than hanging off the heading. */}
-        <div className="flex min-h-0 max-w-[980px] flex-1 items-center gap-8">
-        {/* Barrel scale: hairline + one tick per item, fill tracks focus. */}
-        <div className="relative hidden w-2 flex-shrink-0 self-stretch sm:block" aria-hidden="true">
-          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border" />
-          <div
-            className="absolute left-1/2 top-0 w-px -translate-x-1/2 bg-primary transition-[height]"
-            style={{ height: `${(focus / Math.max(1, segments)) * 100}%` }}
-          />
-          {items.map((_, i) => (
-            <div
-              key={i}
-              className="absolute left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-border"
-              style={{ top: `${(i / Math.max(1, segments)) * 100}%` }}
-            />
-          ))}
-        </div>
-
+        {/* Full container width, not the 980px cap this used to carry. The
+            cap was meant to stop the names and the panel drifting to
+            opposite ends of the screen, but with the panel column allowed to
+            grow (`flex-1`) it did that by leaving a dead ~300px gutter to the
+            right of the card instead — the section's heading ran to the
+            container's right edge and the content under it stopped ~25%
+            short of it. Capping the *panel* (max-w below) does the same job
+            without breaking the section's own rail. */}
+        <div className="flex min-h-0 flex-1 items-center gap-8 lg:gap-12">
         <div
           role="group"
           aria-label="Fynoptic — Courses, Articles, Flashcards, Practice"
-          className="flex min-w-0 flex-none flex-col justify-center gap-3"
+          className="relative flex min-w-0 flex-none flex-col justify-center gap-3 pl-7"
         >
+          {/* Barrel scale: hairline + one tick per name, fill tracks focus.
+              It used to be a sibling column with `self-stretch`, so it ran
+              the full height of this row (~520px) while the four names
+              occupy ~300px of it — the ticks, spaced evenly down the rail,
+              lined up with nothing at all and the rail read as a stray line
+              in the margin. Living inside the names column, with each tick
+              rendered by its own name row (below), pins tick i to name i's
+              optical centre by construction. */}
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute bottom-0 left-[3px] top-0 w-px bg-border"
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-[3px] top-0 w-px bg-primary"
+            style={{ height: `${(focus / Math.max(1, segments)) * 100}%` }}
+          />
           {items.map((item, i) => {
             const d = Math.min(1, Math.abs(focus - i));
             const blur = d * NAME_BLUR_CAP_PX;
@@ -416,7 +459,7 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
                 data-rack-name={item.id}
                 onClick={() => scrollToItem(i)}
                 onKeyDown={(event) => handleKeyDown(event, i)}
-                className="w-fit rounded-md px-1 py-1 text-left transition-[filter] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="relative w-fit cursor-pointer rounded-md px-1 py-1 text-left transition-[filter] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 style={{
                   filter: `blur(${blur}px)`,
                   opacity,
@@ -425,6 +468,13 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
                   color: mixColor(item.accent, 1 - d),
                 }}
               >
+                <span
+                  aria-hidden="true"
+                  className="absolute left-[-28px] top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"
+                  style={{
+                    background: d < 0.5 ? 'currentColor' : 'var(--border, rgba(255,255,255,.14))',
+                  }}
+                />
                 <span className="text-[3.25rem] font-semibold leading-[1.05] [font-family:var(--display-face)] lg:text-[3.875rem]">
                   {item.title}
                 </span>
@@ -433,30 +483,28 @@ function RackTrack({ items }: { items: readonly RackItem[] }) {
           })}
         </div>
 
-        {/* Fixed panel height rather than `inset-0` against a stretched
-            column: the panels cross-fade on top of each other, so the box has
-            to be a stable size, and sizing it to the tallest panel's content
-            is what stops it reading as a mostly-empty card. */}
-        <div className="relative min-w-0 flex-1 self-center" style={{ height: 'min(460px, 100%)' }}>
-          {/* At most 2 panels mounted at once: the one losing focus and the
-              one gaining it. While dwelling (crossFrac === 0) only one panel
-              exists at all — no live filter recompute for anything else. */}
-          {items[lowIndex] && (
-            <RackPanel
-              key={items[lowIndex].id}
-              item={items[lowIndex]}
-              d={crossFrac}
-              incoming={false}
-            />
-          )}
-          {crossFrac > 0 && highIndex !== lowIndex && items[highIndex] && (
-            <RackPanel
-              key={items[highIndex].id}
-              item={items[highIndex]}
-              d={1 - crossFrac}
-              incoming={true}
-            />
-          )}
+        {/* The card shell is permanently mounted and never animated: only
+            its contents rack. Fixed height (rather than stretching with the
+            row) so the box doesn't resize under the swap; `max-w` caps the
+            measure without leaving a dead gutter, since `mr-auto` is not
+            used — the column still reaches the container's right edge on
+            narrower screens and the text inside carries its own 40ch. */}
+        <div
+          className="flex min-w-0 flex-1 flex-col justify-center self-center rounded-lg border border-border bg-card p-6 sm:p-7"
+          style={{
+            // `min(460px, 100%)` looked like it adapted and didn't: a
+            // percentage height only resolves against a definite parent
+            // height, and inside a centred flex row it isn't one, so the
+            // card fell back to a flat 460px. On a 600px-tall window that
+            // is taller than the whole row, and the pin's `overflow-hidden`
+            // sheared the bottom off the card and the last two names.
+            // Viewport units are always definite: 260px is the lead plus
+            // the pin's top padding, so this is "whatever is left under the
+            // heading", floored so the card never collapses.
+            height: 'clamp(280px, calc(100vh - var(--header-h, 56px) - 260px), 460px)',
+          }}
+        >
+          {panelItem && <RackPanel key={panelItem.id} item={panelItem} d={panelD} />}
         </div>
         </div>
       </div>
@@ -546,15 +594,17 @@ function RackTabs({ items }: { items: readonly RackItem[] }) {
 export function RackFocus() {
   const [mounted, setMounted] = useState(false);
   const prefersReducedMotion = useReducedMotion();
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [tooSmall, setTooSmall] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT_PX - 1}px)`);
-    const update = () => setIsNarrow(mq.matches);
+    const mq = window.matchMedia(
+      `(max-width: ${NARROW_BREAKPOINT_PX - 1}px), (max-height: ${SHORT_BREAKPOINT_PX - 1}px)`,
+    );
+    const update = () => setTooSmall(mq.matches);
     update();
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
@@ -566,7 +616,7 @@ export function RackFocus() {
   // preference are both known to allow it. Same "render safe default first,
   // then upgrade" shape as Hero.tsx/RotatingWord.tsx use to avoid hydration
   // mismatches (matchMedia doesn't exist during SSR).
-  const useRack = mounted && !prefersReducedMotion && !isNarrow;
+  const useRack = mounted && !prefersReducedMotion && !tooSmall;
 
   const items = useMemo(() => RACK_ITEMS, []);
 

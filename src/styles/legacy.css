@@ -267,10 +267,26 @@ button {
    :not([data-slot]) would raise this selector's specificity above every
    single-class button rule below (.modal-close, .user-icon, …), letting
    the reset win where it used to lose and blanking their backgrounds too. */
-button:not(:where([data-slot="button"])) {
-  background: none;
-  border: none;
-  color: inherit;
+/* In `@layer base` on purpose, and it is the only layered rule in this
+   file. Unlayered declarations beat layered ones no matter what the
+   specificity is, so as a plain rule this reset out-ranked every Tailwind
+   utility in globals.css's `@layer utilities` — which meant a `bg-*` or
+   `text-*` utility on ANY plain <button> in the React components silently
+   did nothing. Two live examples: RackFocus's tablist fallback
+   (`bg-primary text-primary-foreground` on the selected tab) rendered with
+   no selected state at all on every narrow or short viewport, and the
+   hero ticket's focused row (`bg-accent/40`) never painted its highlight.
+   The `data-slot` exclusion below was an earlier, narrower attempt at the
+   same problem, scoped to shadcn's <Button>; the layer generalises it.
+   Layer order is first-declaration order, and this file is imported before
+   globals.css, so `base` sorts below `utilities` and every unlayered rule
+   in this file still wins over it exactly as before. */
+@layer base {
+  button:not(:where([data-slot="button"])) {
+    background: none;
+    border: none;
+    color: inherit;
+  }
 }
 input, select, textarea {
   font: inherit;

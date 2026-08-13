@@ -228,7 +228,12 @@ export function Ticket({ scrollProgress, reducedMotion }: TicketProps) {
         {reduceMotion ? (
           <p>{activeRow.note}</p>
         ) : (
-          <AnimatePresence mode="wait">
+          /* `initial={false}` suppresses the enter animation for the FIRST
+             child only, which is also what stops framer-motion serialising
+             `opacity: 0` into the server-rendered markup for it. Without it
+             this note shipped invisible and stayed invisible for anyone
+             whose JS never ran. Subsequent row changes still animate. */
+          <AnimatePresence mode="wait" initial={false}>
             <motion.p
               key={activeRow.id}
               initial={{ opacity: 0, y: 4 }}

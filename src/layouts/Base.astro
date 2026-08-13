@@ -59,6 +59,24 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
     // <body> once React hydrates, using the same storage key/default, so it
     // recomputes the same value and never flips it.
     (function () {
+      // `no-js` ships in the markup and was never taken off again, so the
+      // class meant "JS is unavailable" on every page including the ones
+      // where it plainly was. Removing it here — synchronously, before
+      // first paint, in the one script that is guaranteed to run — is what
+      // makes it mean what it says, and lets the stylesheet keep
+      // JS-dependent reveal animations off for readers who really have no
+      // JS instead of hiding their content behind an animation that will
+      // never fire.
+      document.documentElement.classList.remove('no-js');
+      // `page-loaded` is the gate every reveal animation hangs off. It has
+      // to be set here, before first paint, and not from the module script
+      // at DOMContentLoaded where it used to live: the reveal styles take
+      // an element from visible to opacity 0 and animate it back, so
+      // applying the class after the first frame is painted makes content
+      // appear, blink out, and fade in again. Setting it pre-paint means
+      // the element is only ever seen mid-animation. It stays JS-gated, so
+      // a reader without JS still gets the plain, visible resting state.
+      document.documentElement.classList.add('page-loaded');
       try {
         var theme = localStorage.getItem('fynoptic-theme');
         document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : 'dark');
@@ -115,10 +133,22 @@ const canonicalUrl = new URL(canonical, 'https://fynoptic.org').toString();
     // src/lib/auth.ts's module scope, respectively. See both files.
     import { initModals } from '../lib/modal';
     import { applyA11y } from '../lib/a11y';
+    import { initReveal } from '../lib/reveal';
 
     document.addEventListener('DOMContentLoaded', () => {
       applyA11y();
       initModals();
+      // Scroll-triggered reveals are a layout shell concern, not a homepage
+      // one. This pair used to live in index.astro alone, so `/courses` —
+      // which carries fourteen `.fade-up` elements — got no observer at
+      // all: legacy.css's `.fade-up { animation: fadeUp .7s forwards }`
+      // simply ran every one of them at load, including the ten below the
+      // fold, so by the time a reader scrolled to them the "reveal" had
+      // been over for several seconds. Every page gets the observer now,
+      // and the stylesheet no longer self-animates `.fade-up` (see
+      // redesign.css, "reveal on scroll" section). `page-loaded` itself is
+      // set pre-paint by the inline <head> script above.
+      initReveal();
     });
   </script>
 </body>

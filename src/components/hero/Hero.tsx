@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { useReducedMotion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { RotatingWord } from './RotatingWord';
 import { PartnerStrip } from './PartnerStrip';
@@ -88,12 +88,20 @@ export function Hero() {
       ref={heroRef}
       className="grid grid-cols-1 items-start gap-10 md:grid-cols-[1.04fr_.96fr] md:gap-8 lg:gap-12"
     >
-      <motion.div
-        className="min-w-0"
-        initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      >
+      {/* The entrance is a CSS class, not a framer-motion `initial`. Both
+          columns used to be `motion.div initial={{opacity:0}}`, and
+          framer-motion serialises `initial` into the server-rendered markup
+          — so the ENTIRE hero (headline, sub, both CTAs, the fine print, the
+          partner strip and the ticket) shipped as `style="opacity:0"` and
+          only became visible once React had hydrated and framer's first
+          animation frame ran. That is the page's LCP content gated on a
+          JS bundle: blank for the whole hydration window on a slow
+          connection, and blank forever with JS off or broken.
+          `.reveal-up` (legacy.css) is the site's own entrance animation and
+          is keyed off `html.page-loaded`, which only exists when JS ran —
+          so the no-JS baseline is plain visible content, and reduced-motion
+          users are already covered by legacy.css's opt-out for the class. */}
+      <div className="min-w-0 reveal-up">
         {/* redesign.css's sitewide `h1 { font-family: var(--display-face) !important;
           font-weight: 600 !important; letter-spacing: -.018em !important }` outranks
           plain, non-important Tailwind utilities on ANY of those three properties, not
@@ -154,16 +162,11 @@ export function Hero() {
         </p>
 
         <PartnerStrip />
-      </motion.div>
+      </div>
 
-      <motion.div
-        className="min-w-0"
-        initial={reduceMotion ? undefined : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      >
+      <div className="min-w-0 reveal-up delay-1">
         <Ticket scrollProgress={scrollProgress} reducedMotion={reduceMotion} />
-      </motion.div>
+      </div>
     </div>
   );
 }

@@ -60,12 +60,6 @@ import RackFocus from '../components/rack/RackFocus';
     { "@context": "https://schema.org", "@type": "Course", "name": "Fynoptic Core Modules", "provider": { "@type": "Organization", "name": "Fynoptic" } }
   </script>
 
-  <script>
-    import { initReveal } from '../lib/reveal';
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.documentElement.classList.add('page-loaded');
-      initReveal();
-    });
-  </script>
+  <!-- `page-loaded` + initReveal() moved to Base.astro so every page gets
+       scroll-triggered reveals, not just this one. -->
 </Base>

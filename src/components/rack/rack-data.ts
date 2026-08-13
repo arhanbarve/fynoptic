@@ -87,7 +87,11 @@ export const RACK_ITEMS: readonly RackItem[] = [
     description: 'Review and master 3,000+ vocabulary words with easy to use flashcards.',
     statPrimary: '3,000+ Terms',
     statSecondary: '12 Units',
-    href: '/flashcards',
+    // Singular. The page is src/pages/flashcard.astro, and every other link
+    // to it on the site (Nav.tsx, Footer.tsx) uses `/flashcard` — this was
+    // the only `/flashcards` anywhere, and it 404'd. One of the four
+    // primary calls to action in the homepage's main section.
+    href: '/flashcard',
     accent: '#6FE0B8',
   },
   {
